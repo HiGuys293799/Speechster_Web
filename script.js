@@ -4,6 +4,7 @@ const practiceScreen = document.getElementById('practice-screen');
 const gameScreen1 = document.getElementById('game-screen-1');
 const gameScreen2 = document.getElementById('game-screen-2');
 const settingsScreen = document.getElementById('settings-screen');
+const appContainer = document.getElementById('app-container');
 
 const connectButton = document.getElementById('connect-button');
 const deviceLight = document.getElementById('device-light');
@@ -12,7 +13,7 @@ const bluetoothStatus = document.getElementById('bluetooth-status');
 const practiceBtn = document.getElementById('practice-mode-btn');
 const gameBtn1 = document.getElementById('game-mode-btn-1');
 const gameBtn2 = document.getElementById('game-mode-btn-2');
-const settingsBtn = document.getElementById('settings-btn'); // New element
+const settingsBtn = document.getElementById('settings-btn');
 
 const practiceCountDisplay = document.getElementById('practice-count');
 const practiceFeedback = document.getElementById('practice-feedback');
@@ -32,9 +33,16 @@ const startGame2Btn = document.getElementById('start-game-2');
 const game2BackBtn = document.getElementById('game-2-back');
 const currentWordDisplay = document.getElementById('current-word');
 
-const lightModeBtn = document.getElementById('light-mode-btn'); // New element
-const darkModeBtn = document.getElementById('dark-mode-btn');   // New element
-const settingsBackBtn = document.getElementById('settings-back'); // New element
+const lightModeBtn = document.getElementById('light-mode-btn');
+const darkModeBtn = document.getElementById('dark-mode-btn');
+const settingsBackBtn = document.getElementById('settings-back');
+
+// Hardcoded heights for each screen in separate variables for easier modification
+const menuScreenHeight = 570;
+const practiceScreenHeight = 455;
+const gameScreen1Height = 510;
+const gameScreen2Height = 510;
+const settingsScreenHeight = 300;
 
 // State variables
 let practiceCount = 0;
@@ -49,10 +57,54 @@ const words = ["hello", "world", "apple", "banana", "cat", "dog"];
 let currentWordIndex = 0;
 
 // --- Helper Functions ---
-function showScreen(screen) {
-    const screens = document.querySelectorAll('.screen');
-    screens.forEach(s => s.classList.remove('active'));
-    screen.classList.add('active');
+function showScreen(nextScreen) {
+    const currentScreen = document.querySelector('.screen.active');
+    
+    // Determine the hardcoded height based on the next screen's ID
+    let finalHeight;
+    switch (nextScreen.id) {
+        case 'mode-selection-screen':
+            finalHeight = menuScreenHeight;
+            break;
+        case 'practice-screen':
+            finalHeight = practiceScreenHeight;
+            break;
+        case 'game-screen-1':
+            finalHeight = gameScreen1Height;
+            break;
+        case 'game-screen-2':
+            finalHeight = gameScreen2Height;
+            break;
+        case 'settings-screen':
+            finalHeight = settingsScreenHeight;
+            break;
+        default:
+            finalHeight = 400; // A default fallback height
+    }
+    
+    if (currentScreen) {
+        if (Math.round(appContainer.clientHeight) !== Math.round(finalHeight)) {
+            appContainer.style.height = `${finalHeight}px`;
+        }
+        
+        // Handle screen transitions
+        currentScreen.classList.remove('active');
+        currentScreen.classList.add('slide-out');
+        
+        currentScreen.addEventListener('animationend', () => {
+            currentScreen.classList.remove('slide-out');
+            nextScreen.classList.add('active');
+            nextScreen.classList.add('slide-in');
+            
+            nextScreen.addEventListener('animationend', () => {
+                nextScreen.classList.remove('slide-in');
+            }, { once: true });
+        }, { once: true });
+    } else {
+        // Handle initial screen on first load
+        appContainer.style.height = `${finalHeight}px`;
+        nextScreen.classList.add('active');
+    }
 }
 
 function startTimer(duration, display, callback) {
@@ -72,6 +124,11 @@ function startTimer(duration, display, callback) {
 }
 
 // --- Main App Logic ---
+
+// Set initial screen and container height
+window.addEventListener('DOMContentLoaded', () => {
+    showScreen(modeSelectionScreen);
+});
 
 // Connect Button Logic (Placeholder)
 connectButton.addEventListener('click', () => {
@@ -126,7 +183,6 @@ darkModeBtn.addEventListener('click', () => {
 settingsBackBtn.addEventListener('click', () => {
     showScreen(modeSelectionScreen);
 });
-
 
 // Practice Mode Logic
 correctBtn.addEventListener('click', () => {
