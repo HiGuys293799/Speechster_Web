@@ -1,39 +1,48 @@
 // Get all necessary DOM elements
-const connectionScreen = document.getElementById('connection-screen');
 const modeSelectionScreen = document.getElementById('mode-selection-screen');
 const practiceScreen = document.getElementById('practice-screen');
 const gameScreen1 = document.getElementById('game-screen-1');
 const gameScreen2 = document.getElementById('game-screen-2');
+const settingsScreen = document.getElementById('settings-screen');
 
 const connectButton = document.getElementById('connect-button');
 const deviceLight = document.getElementById('device-light');
-const connectionStatus = document.getElementById('connection-status');
+const bluetoothStatus = document.getElementById('bluetooth-status');
 
 const practiceBtn = document.getElementById('practice-mode-btn');
-const gameBtn = document.getElementById('game-mode-btn');
+const gameBtn1 = document.getElementById('game-mode-btn-1');
+const gameBtn2 = document.getElementById('game-mode-btn-2');
+const settingsBtn = document.getElementById('settings-btn'); // New element
 
 const practiceCountDisplay = document.getElementById('practice-count');
 const practiceFeedback = document.getElementById('practice-feedback');
-const backToModesBtn = document.getElementById('back-to-modes-btn');
+const practiceBackBtn = document.getElementById('practice-back');
+const correctBtn = document.getElementById('correct-btn');
 
 const game1ScoreDisplay = document.getElementById('game-1-score');
 const game1TimerDisplay = document.getElementById('game-1-timer');
 const game1Feedback = document.getElementById('game-1-feedback');
 const readyBtn = document.getElementById('ready-btn');
-const backToModesGame1 = document.getElementById('back-to-modes-game-1');
+const game1BackBtn = document.getElementById('game-1-back');
 
 const game2ScoreDisplay = document.getElementById('game-2-score');
 const game2TimerDisplay = document.getElementById('game-2-timer');
 const game2Feedback = document.getElementById('game-2-feedback');
 const startGame2Btn = document.getElementById('start-game-2');
-const backToModesGame2 = document = document.getElementById('back-to-modes-game-2');
+const game2BackBtn = document.getElementById('game-2-back');
 const currentWordDisplay = document.getElementById('current-word');
+
+const lightModeBtn = document.getElementById('light-mode-btn'); // New element
+const darkModeBtn = document.getElementById('dark-mode-btn');   // New element
+const settingsBackBtn = document.getElementById('settings-back'); // New element
 
 // State variables
 let practiceCount = 0;
 let game1Score = 0;
 let game2Score = 0;
 let timerInterval;
+let game1ScoreInterval;
+let game2WordInterval;
 
 // Dummy data for Game 2 words
 const words = ["hello", "world", "apple", "banana", "cat", "dog"];
@@ -64,30 +73,23 @@ function startTimer(duration, display, callback) {
 
 // --- Main App Logic ---
 
-// Connection Screen Logic
-connectButton.addEventListener('click', async () => {
-    // **TODO: REPLACE WITH ACTUAL BLUETOOTH API LOGIC**
-    // This is a placeholder. You need to implement the Web Bluetooth API here.
-    // The following code simulates the connection status changes.
-
-    connectionStatus.textContent = "Connecting...";
+// Connect Button Logic (Placeholder)
+connectButton.addEventListener('click', () => {
+    bluetoothStatus.textContent = "Connecting...";
+    connectButton.disabled = true;
     deviceLight.classList.remove('red-light');
     deviceLight.classList.add('yellow-light');
+    deviceLight.classList.add('blinking');
 
-    try {
-        // await connectToDevice(); // This is the real call you'll make
-        setTimeout(() => { // Simulating the connection process
-            connectionStatus.textContent = "Connected! Ready to go.";
-            deviceLight.classList.remove('yellow-light');
-            deviceLight.classList.add('green-light');
-            showScreen(modeSelectionScreen);
-        }, 2000);
-    } catch (error) {
-        connectionStatus.textContent = "Connection failed. Please try again.";
+    const randomDelay = Math.random() * 4000 + 1000;
+
+    setTimeout(() => {
+        bluetoothStatus.textContent = "Bluetooth Not Functional Yet";
+        connectButton.disabled = false;
         deviceLight.classList.remove('yellow-light');
+        deviceLight.classList.remove('blinking');
         deviceLight.classList.add('red-light');
-        console.error("Bluetooth connection error:", error);
-    }
+    }, randomDelay);
 });
 
 // Mode Selection Logic
@@ -96,33 +98,39 @@ practiceBtn.addEventListener('click', () => {
     resetPracticeMode();
 });
 
-gameBtn.addEventListener('click', () => {
+gameBtn1.addEventListener('click', () => {
     showScreen(gameScreen1);
     resetGame1();
 });
 
-// Practice Mode Logic
-let startButtonPresses = 0;
-document.addEventListener('click', (e) => {
-    // This part of the logic is based on the number of button presses
-    if (e.target.id === 'connect-button') {
-        startButtonPresses++;
-        if (startButtonPresses === 2) {
-            showScreen(practiceScreen);
-            resetPracticeMode();
-        } else if (startButtonPresses === 3) {
-            showScreen(gameScreen1); // Assuming game mode starts with Game 1
-            resetGame1();
-        }
-        setTimeout(() => startButtonPresses = 0, 1500); // Reset count after a short delay
-    }
+gameBtn2.addEventListener('click', () => {
+    showScreen(gameScreen2);
+    resetGame2();
 });
 
-// **TODO: ADD YOUR DEVICE SENSOR LOGIC FOR PRACTICE MODE**
-// This is where you would listen for the device's signal that the tongue
-// has touched the lip/tongue. The code below simulates this with a spacebar keypress.
-document.addEventListener('keydown', (e) => {
-    if (e.key === ' ' && practiceScreen.classList.contains('active')) {
+// Settings Button Logic
+settingsBtn.addEventListener('click', () => {
+    showScreen(settingsScreen);
+});
+
+lightModeBtn.addEventListener('click', () => {
+    document.body.classList.remove('dark-mode');
+    document.body.classList.add('light-mode');
+});
+
+darkModeBtn.addEventListener('click', () => {
+    document.body.classList.remove('light-mode');
+    document.body.classList.add('dark-mode');
+});
+
+settingsBackBtn.addEventListener('click', () => {
+    showScreen(modeSelectionScreen);
+});
+
+
+// Practice Mode Logic
+correctBtn.addEventListener('click', () => {
+    if (practiceCount < 10) {
         practiceCount++;
         practiceCountDisplay.textContent = practiceCount;
         if (practiceCount === 10) {
@@ -137,32 +145,27 @@ function resetPracticeMode() {
     practiceFeedback.textContent = '';
 }
 
-backToModesBtn.addEventListener('click', () => {
+practiceBackBtn.addEventListener('click', () => {
     showScreen(modeSelectionScreen);
 });
 
 // Game Mode 1 Logic
 readyBtn.addEventListener('click', () => {
     startTimer(180, game1TimerDisplay, () => {
+        clearInterval(game1ScoreInterval);
         game1Feedback.textContent = getGame1Feedback(game1Score);
     });
 
-    // **TODO: ADD YOUR DEVICE SENSOR LOGIC FOR GAME 1**
-    // This is where you'll listen for the sensor on the roof of the mouth.
-    // The following code simulates this with a timer that increases the score.
-    const simulateSensor = setInterval(() => {
-        if (gameScreen1.classList.contains('active')) {
-            game1Score++;
-            game1ScoreDisplay.textContent = game1Score;
-        }
-    }, 1000); // Simulates 1 point per second
-
-    setTimeout(() => {
-        clearInterval(simulateSensor);
-    }, 180000);
+    clearInterval(game1ScoreInterval);
+    game1ScoreInterval = setInterval(() => {
+        game1Score++;
+        game1ScoreDisplay.textContent = game1Score;
+    }, 1000);
 });
 
 function resetGame1() {
+    clearInterval(timerInterval);
+    clearInterval(game1ScoreInterval);
     game1Score = 0;
     game1ScoreDisplay.textContent = 0;
     game1TimerDisplay.textContent = "03:00";
@@ -177,38 +180,31 @@ function getGame1Feedback(score) {
     return "Keep practicing!";
 }
 
-backToModesGame1.addEventListener('click', () => {
+game1BackBtn.addEventListener('click', () => {
+    resetGame1();
     showScreen(modeSelectionScreen);
 });
 
 // Game Mode 2 Logic
 startGame2Btn.addEventListener('click', () => {
     startTimer(60, game2TimerDisplay, () => {
+        clearInterval(game2WordInterval);
         game2Feedback.textContent = getGame2Feedback(game2Score);
     });
     
-    // **TODO: ADD YOUR WEB SPEECH API LOGIC FOR GAME 2**
-    // This is where you will use a speech recognition API to listen to the user.
-    // The code below simulates this by cycling through words and adding points.
-    simulateSpeechRecognition();
-});
-
-function simulateSpeechRecognition() {
-    let wordInterval = setInterval(() => {
-        // Simulating the recognition of a word and adding a point
+    clearInterval(game2WordInterval);
+    game2WordInterval = setInterval(() => {
         game2Score++;
         game2ScoreDisplay.textContent = game2Score;
         
         currentWordIndex = (currentWordIndex + 1) % words.length;
         currentWordDisplay.textContent = words[currentWordIndex];
-    }, 5000); // Change word every 5 seconds
-
-    setTimeout(() => {
-        clearInterval(wordInterval);
-    }, 60000);
-}
+    }, 5000);
+});
 
 function resetGame2() {
+    clearInterval(timerInterval);
+    clearInterval(game2WordInterval);
     game2Score = 0;
     game2ScoreDisplay.textContent = 0;
     game2TimerDisplay.textContent = "01:00";
@@ -225,6 +221,7 @@ function getGame2Feedback(score) {
     return "Keep practicing!";
 }
 
-backToModesGame2.addEventListener('click', () => {
+game2BackBtn.addEventListener('click', () => {
+    resetGame2();
     showScreen(modeSelectionScreen);
 });
