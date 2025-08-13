@@ -37,7 +37,7 @@ const darkModeBtn = document.getElementById('dark-mode-btn');
 const menuScreenHeight = 500;
 const practiceScreenHeight = 455;
 const gameScreen1Height = 550;
-const gameScreen2Height = 600;
+const gameScreen2Height = 630;
 const settingsScreenHeight = 300;
 
 // Hardcoded back button positions for each screen
