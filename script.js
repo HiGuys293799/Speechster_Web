@@ -17,32 +17,37 @@ const settingsBtn = document.getElementById('settings-btn');
 
 const practiceCountDisplay = document.getElementById('practice-count');
 const practiceFeedback = document.getElementById('practice-feedback');
-const practiceBackBtn = document.getElementById('practice-back');
 const correctBtn = document.getElementById('correct-btn');
 
 const game1ScoreDisplay = document.getElementById('game-1-score');
 const game1TimerDisplay = document.getElementById('game-1-timer');
 const game1Feedback = document.getElementById('game-1-feedback');
 const readyBtn = document.getElementById('ready-btn');
-const game1BackBtn = document.getElementById('game-1-back');
 
 const game2ScoreDisplay = document.getElementById('game-2-score');
 const game2TimerDisplay = document.getElementById('game-2-timer');
 const game2Feedback = document.getElementById('game-2-feedback');
 const startGame2Btn = document.getElementById('start-game-2');
-const game2BackBtn = document.getElementById('game-2-back');
 const currentWordDisplay = document.getElementById('current-word');
 
 const lightModeBtn = document.getElementById('light-mode-btn');
 const darkModeBtn = document.getElementById('dark-mode-btn');
-const settingsBackBtn = document.getElementById('settings-back');
 
 // Hardcoded heights for each screen in separate variables for easier modification
-const menuScreenHeight = 570;
+const menuScreenHeight = 500;
 const practiceScreenHeight = 455;
-const gameScreen1Height = 510;
-const gameScreen2Height = 510;
+const gameScreen1Height = 550;
+const gameScreen2Height = 600;
 const settingsScreenHeight = 300;
+
+// Hardcoded back button positions for each screen
+const backButtonPositions = {
+    'mode-selection-screen': '5px',
+    'practice-screen': '5px',
+    'game-screen-1': '5px',
+    'game-screen-2': '5px',
+    'settings-screen': '5px'
+};
 
 // State variables
 let practiceCount = 0;
@@ -57,7 +62,7 @@ const words = ["hello", "world", "apple", "banana", "cat", "dog"];
 let currentWordIndex = 0;
 
 // --- Helper Functions ---
-function showScreen(nextScreen) {
+function showScreen(nextScreen, isBack = false) {
     const currentScreen = document.querySelector('.screen.active');
     
     // Determine the hardcoded height based on the next screen's ID
@@ -81,29 +86,33 @@ function showScreen(nextScreen) {
         default:
             finalHeight = 400; // A default fallback height
     }
+
+    // Update the back button's position for the new screen
+    document.documentElement.style.setProperty('--back-btn-top-position', backButtonPositions[nextScreen.id]);
     
+    // Update container height if it needs to change
+    if (Math.round(appContainer.clientHeight) !== Math.round(finalHeight)) {
+        appContainer.style.height = `${finalHeight}px`;
+    }
+    
+    // Animate the transition between screens
     if (currentScreen) {
-        if (Math.round(appContainer.clientHeight) !== Math.round(finalHeight)) {
-            appContainer.style.height = `${finalHeight}px`;
+        // Handle screen transitions based on whether it's a "back" action
+        if (isBack) {
+            currentScreen.classList.add('slide-out-back');
+            nextScreen.classList.add('active', 'slide-in-back');
+        } else {
+            currentScreen.classList.add('slide-out');
+            nextScreen.classList.add('active', 'slide-in');
         }
         
-        // Handle screen transitions
-        currentScreen.classList.remove('active');
-        currentScreen.classList.add('slide-out');
-        
         currentScreen.addEventListener('animationend', () => {
-            currentScreen.classList.remove('slide-out');
-            nextScreen.classList.add('active');
-            nextScreen.classList.add('slide-in');
-            
-            nextScreen.addEventListener('animationend', () => {
-                nextScreen.classList.remove('slide-in');
-            }, { once: true });
+            currentScreen.classList.remove('active', 'slide-out', 'slide-out-back');
         }, { once: true });
-    } else {
-        // Handle initial screen on first load
-        appContainer.style.height = `${finalHeight}px`;
-        nextScreen.classList.add('active');
+        
+        nextScreen.addEventListener('animationend', () => {
+            nextScreen.classList.remove('slide-in', 'slide-in-back');
+        }, { once: true });
     }
 }
 
@@ -125,9 +134,11 @@ function startTimer(duration, display, callback) {
 
 // --- Main App Logic ---
 
-// Set initial screen and container height
+// Set initial screen and container height on page load
 window.addEventListener('DOMContentLoaded', () => {
-    showScreen(modeSelectionScreen);
+    appContainer.style.height = `${menuScreenHeight}px`;
+    modeSelectionScreen.classList.add('active');
+    document.documentElement.style.setProperty('--back-btn-top-position', backButtonPositions[modeSelectionScreen.id]);
 });
 
 // Connect Button Logic (Placeholder)
@@ -141,56 +152,101 @@ connectButton.addEventListener('click', () => {
     const randomDelay = Math.random() * 4000 + 1000;
 
     setTimeout(() => {
-        bluetoothStatus.textContent = "Bluetooth Not Functional Yet";
+        bluetoothStatus.textContent = "CRITICAL ERROR: BLUETOOTH UNAVAIL";
         connectButton.disabled = false;
         deviceLight.classList.remove('yellow-light');
         deviceLight.classList.remove('blinking');
-        deviceLight.classList.add('red-light');
+        deviceLight.classList.add('dark-red-light');
     }, randomDelay);
 });
 
-// Mode Selection Logic
-practiceBtn.addEventListener('click', () => {
-    showScreen(practiceScreen);
-    resetPracticeMode();
-});
-
-gameBtn1.addEventListener('click', () => {
-    showScreen(gameScreen1);
-    resetGame1();
-});
-
-gameBtn2.addEventListener('click', () => {
-    showScreen(gameScreen2);
-    resetGame2();
-});
-
-// Settings Button Logic
-settingsBtn.addEventListener('click', () => {
-    showScreen(settingsScreen);
-});
-
-lightModeBtn.addEventListener('click', () => {
-    document.body.classList.remove('dark-mode');
-    document.body.classList.add('light-mode');
-});
-
-darkModeBtn.addEventListener('click', () => {
-    document.body.classList.remove('light-mode');
-    document.body.classList.add('dark-mode');
-});
-
-settingsBackBtn.addEventListener('click', () => {
-    showScreen(modeSelectionScreen);
-});
-
-// Practice Mode Logic
-correctBtn.addEventListener('click', () => {
-    if (practiceCount < 10) {
-        practiceCount++;
-        practiceCountDisplay.textContent = practiceCount;
-        if (practiceCount === 10) {
-            practiceFeedback.textContent = "Perfect, you are doing great!";
+// Use a single event listener on the app container to handle all button clicks
+appContainer.addEventListener('click', (event) => {
+    const target = event.target;
+    
+    // Check if the clicked element has the "btn" class
+    if (target.classList.contains('btn')) {
+        const buttonId = target.id;
+        
+        // Handle menu buttons
+        switch (buttonId) {
+            case 'practice-mode-btn':
+                showScreen(practiceScreen);
+                resetPracticeMode();
+                break;
+            case 'game-mode-btn-1':
+                showScreen(gameScreen1);
+                resetGame1();
+                break;
+            case 'game-mode-btn-2':
+                showScreen(gameScreen2);
+                resetGame2();
+                break;
+            case 'settings-btn':
+                showScreen(settingsScreen);
+                break;
+            case 'correct-btn':
+                if (practiceCount < 10) {
+                    practiceCount++;
+                    practiceCountDisplay.textContent = practiceCount;
+                    if (practiceCount === 10) {
+                        practiceFeedback.textContent = "Perfect, you are doing great!";
+                    }
+                }
+                break;
+            case 'ready-btn':
+                startTimer(180, game1TimerDisplay, () => {
+                    clearInterval(game1ScoreInterval);
+                    game1Feedback.textContent = getGame1Feedback(game1Score);
+                });
+                clearInterval(game1ScoreInterval);
+                game1ScoreInterval = setInterval(() => {
+                    game1Score++;
+                    game1ScoreDisplay.textContent = game1Score;
+                }, 1000);
+                break;
+            case 'start-game-2':
+                startTimer(60, game2TimerDisplay, () => {
+                    clearInterval(game2WordInterval);
+                    game2Feedback.textContent = getGame2Feedback(game2Score);
+                });
+                clearInterval(game2WordInterval);
+                game2WordInterval = setInterval(() => {
+                    game2Score++;
+                    game2ScoreDisplay.textContent = game2Score;
+                    currentWordIndex = (currentWordIndex + 1) % words.length;
+                    currentWordDisplay.textContent = words[currentWordIndex];
+                }, 5000);
+                break;
+            case 'light-mode-btn':
+                document.body.classList.remove('dark-mode');
+                document.body.classList.add('light-mode');
+                break;
+            case 'dark-mode-btn':
+                document.body.classList.remove('light-mode');
+                document.body.classList.add('dark-mode');
+                break;
+        }
+    }
+    
+    // Check if the clicked element has the "back-btn" class
+    if (target.classList.contains('back-btn')) {
+        const buttonId = target.id;
+        switch (buttonId) {
+            case 'practice-back':
+                showScreen(modeSelectionScreen, true);
+                break;
+            case 'game-1-back':
+                resetGame1();
+                showScreen(modeSelectionScreen, true);
+                break;
+            case 'game-2-back':
+                resetGame2();
+                showScreen(modeSelectionScreen, true);
+                break;
+            case 'settings-back':
+                showScreen(modeSelectionScreen, true);
+                break;
         }
     }
 });
@@ -200,24 +256,6 @@ function resetPracticeMode() {
     practiceCountDisplay.textContent = 0;
     practiceFeedback.textContent = '';
 }
-
-practiceBackBtn.addEventListener('click', () => {
-    showScreen(modeSelectionScreen);
-});
-
-// Game Mode 1 Logic
-readyBtn.addEventListener('click', () => {
-    startTimer(180, game1TimerDisplay, () => {
-        clearInterval(game1ScoreInterval);
-        game1Feedback.textContent = getGame1Feedback(game1Score);
-    });
-
-    clearInterval(game1ScoreInterval);
-    game1ScoreInterval = setInterval(() => {
-        game1Score++;
-        game1ScoreDisplay.textContent = game1Score;
-    }, 1000);
-});
 
 function resetGame1() {
     clearInterval(timerInterval);
@@ -235,28 +273,6 @@ function getGame1Feedback(score) {
     if (score >= 10) return "Not bad but you can improve!";
     return "Keep practicing!";
 }
-
-game1BackBtn.addEventListener('click', () => {
-    resetGame1();
-    showScreen(modeSelectionScreen);
-});
-
-// Game Mode 2 Logic
-startGame2Btn.addEventListener('click', () => {
-    startTimer(60, game2TimerDisplay, () => {
-        clearInterval(game2WordInterval);
-        game2Feedback.textContent = getGame2Feedback(game2Score);
-    });
-    
-    clearInterval(game2WordInterval);
-    game2WordInterval = setInterval(() => {
-        game2Score++;
-        game2ScoreDisplay.textContent = game2Score;
-        
-        currentWordIndex = (currentWordIndex + 1) % words.length;
-        currentWordDisplay.textContent = words[currentWordIndex];
-    }, 5000);
-});
 
 function resetGame2() {
     clearInterval(timerInterval);
@@ -276,8 +292,3 @@ function getGame2Feedback(score) {
     if (score >= 3) return "Not bad but you can improve!";
     return "Keep practicing!";
 }
-
-game2BackBtn.addEventListener('click', () => {
-    resetGame2();
-    showScreen(modeSelectionScreen);
-});

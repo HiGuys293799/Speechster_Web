@@ -11,6 +11,29 @@ body {
     overflow: hidden;
     position: relative;
     transition: background-color 0.5s ease;
+
+    /* CSS variables for mouse position tracking */
+    --mouse-x: 50vw;
+    --mouse-y: 50vh;
+}
+
+/* Mouse pointer spotlight effect */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: radial-gradient(
+        circle at var(--mouse-x) var(--mouse-y),
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.05) 15%,
+        transparent 30%
+    );
+    z-index: 10;
+    transition: background 0.2s ease-out;
 }
 
 /* Base background colors without a background image */
@@ -19,7 +42,10 @@ body.light-mode {
     color: #333;
 }
 body.dark-mode {
-    background-color: #1a1a1a;
+    /* Set a CSS variable for the gradient center position */
+    --gradient-center-position: 50%;
+    /* New gradient with brighter colors, shifted to bottom-right, and using a variable */
+    background: linear-gradient(to bottom right, #08162d 0%, #1e4591 var(--gradient-center-position), #08162d 100%);
     color: #f0f0f0;
 }
 
@@ -36,28 +62,42 @@ body.dark-mode {
     max-width: 450px;
     box-sizing: border-box;
     position: relative;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); /* Easing for the height transition */
+    transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    z-index: 10; /* Ensure the app container is above the mouse effect */
 }
 
 /* Page Transition Animations */
 @keyframes slide-in {
     from {
         transform: translateX(100%);
-        opacity: 0;
     }
     to {
         transform: translateX(0);
-        opacity: 1;
     }
 }
 @keyframes slide-out {
     from {
         transform: translateX(0);
-        opacity: 1;
     }
     to {
         transform: translateX(-100%);
-        opacity: 0;
+    }
+}
+@keyframes slide-in-back {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+@keyframes slide-out-back {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(100%);
     }
 }
 
@@ -75,22 +115,29 @@ body.dark-mode {
     box-sizing: border-box;
     pointer-events: none;
     opacity: 0;
+    transition: opacity 0.5s ease;
     transform: translateX(100%);
-    transition: all 0.5s ease-in-out;
 }
 
 .screen.active {
     pointer-events: auto;
     opacity: 1;
     transform: translateX(0);
+    z-index: 2;
 }
-
+.screen.active.slide-in {
+    animation: slide-in 0.5s forwards;
+}
+.screen.active.slide-in-back {
+    animation: slide-in-back 0.5s forwards;
+}
 .screen.slide-out {
     animation: slide-out 0.5s forwards;
+    z-index: 1;
 }
-
-.screen.slide-in {
-    animation: slide-in 0.5s forwards;
+.screen.slide-out-back {
+    animation: slide-out-back 0.5s forwards;
+    z-index: 1;
 }
 
 /* Typography and Elements */
@@ -157,7 +204,7 @@ hr {
 
 .back-btn {
     position: absolute;
-    top: 15px;
+    top: var(--back-btn-top-position, 5px);
     left: 15px;
     background: none;
     border: none;
@@ -167,6 +214,7 @@ hr {
     color: inherit;
     opacity: 0.7;
     transition: opacity 0.2s ease;
+    z-index: 3;
 }
 
 .back-btn:hover {
@@ -189,6 +237,7 @@ hr {
 }
 
 .red-light { background-color: #ff6b6b; }
+.dark-red-light { background-color: #ff0000; }
 .yellow-light { background-color: #ffea7f; }
 .green-light { background-color: #81c784; }
 
@@ -200,6 +249,34 @@ hr {
 
 .blinking {
     animation: blink-yellow 1s infinite;
+}
+
+/* Flexbox for the new button container */
+.button-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* New style to align buttons at the bottom edges */
+.bottom-buttons {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    padding: 0 30px;
+    box-sizing: border-box;
+}
+
+/* Media Query for larger screens (laptops) */
+@media (min-width: 768px) {
+    .button-container {
+        flex-direction: row;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .btn {
+        flex-basis: auto;
+    }
 }
 
 /* Practice Mode Specifics */

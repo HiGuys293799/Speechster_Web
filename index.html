@@ -3,70 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tongue Depressor App (ALPHA)</title>
+    <title>Speechster 1000</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark-mode">
     <div id="app-container">
-        
+
         <div id="mode-selection-screen" class="screen active">
-            <h1>Tongue Depressor Tool (ALPHA)</h1>
-            <p>Select a mode for testing or connect a device.</p>
+            <h1>Speechster 1000 (ALPHA)</h1>
+            <p>Welcome to the Speechster 1000. Select a mode to begin.</p>
+            <hr>
+            <div class="button-container">
+                <button id="practice-mode-btn" class="btn">Practice</button>
+                <button id="game-mode-btn-1" class="btn">Game 1</button>
+                <button id="game-mode-btn-2" class="btn">Game 2</button>
+            </div>
+            <hr>
             <div id="connection-status-container">
                 <div id="device-light" class="red-light"></div>
-                <button id="connect-button" class="btn">Connect to Bluetooth</button>
+                <span id="bluetooth-status">Disconnected</span>
             </div>
-            <span id="bluetooth-status" class="status-message"></span>
-            <hr>
-            <button id="practice-mode-btn" class="btn">Practice Mode</button>
-            <button id="game-mode-btn-1" class="btn">Game Mode 1</button>
-            <button id="game-mode-btn-2" class="btn">Game Mode 2</button>
-            <button id="settings-btn" class="btn">Settings</button>
+            <div class="bottom-buttons">
+                <button id="connect-button" class="btn">Connect</button>
+                <button id="settings-btn" class="btn">Settings</button>
+            </div>
         </div>
 
         <div id="practice-screen" class="screen">
-            <button class="back-btn" id="practice-back">&larr;</button>
+            <button id="practice-back" class="back-btn">&#8592;</button>
             <h1>Practice Mode</h1>
-            <p>The device will be used as a tongue depressor to help with articulation.</p>
-            <div id="practice-word-input">
-                <label for="practice-word">Word to practice:</label>
-                <input type="text" id="practice-word" placeholder="e.g., 'red'">
-            </div>
-            <p>Correct articulations: <span id="practice-count">0</span> / 10</p>
-            <button id="correct-btn" class="btn">Correct!</button>
-            <p id="practice-feedback"></p>
+            <p>The screen will flash green when you successfully make a "pop" sound.</p>
+            <span class="score-display" id="practice-count">0</span>
+            <p id="practice-feedback" class="feedback-message"></p>
+            <button id="correct-btn" class="btn">Correct (simulate)</button>
         </div>
 
         <div id="game-screen-1" class="screen">
-            <button class="back-btn" id="game-1-back">&larr;</button>
-            <h1>Game Mode 1: Tongue Sensor</h1>
-            <p>Click "Ready!" to start the 3-minute timer. The score will increase every second to simulate sensor touches.</p>
-            <p id="game-1-timer" class="timer">03:00</p>
-            <p>Score: <span id="game-1-score">0</span></p>
-            <p id="game-1-feedback"></p>
-            <button id="ready-btn" class="btn">Ready!</button>
+            <button id="game-1-back" class="back-btn">&#8592;</button>
+            <h1>Game 1: Tongue Sensor </h1>
+            <p>Click "Start!" to start the 3-minute timer. The score will increase every second to simulate sensor touches.</p>
+            <span class="timer" id="game-1-timer">03:00</span>
+            <span class="score-display" id="game-1-score">0</span>
+            <p id="game-1-feedback" class="feedback-message"></p>
+            <button id="ready-btn" class="btn">Start!</button>
         </div>
 
         <div id="game-screen-2" class="screen">
-            <button class="back-btn" id="game-2-back">&larr;</button>
-            <h1>Game Mode 2: Word Recognition</h1>
-            <p>Click "Start" to begin the 1-minute timer. The word will change every few seconds to simulate successful recognition.</p>
-            <p id="game-2-timer" class="timer">01:00</p>
-            <p>Say the word: "<span id="current-word">Hello</span>"</p>
-            <p>Score: <span id="game-2-score">0</span></p>
-            <p id="game-2-feedback"></p>
-            <button id="start-game-2" class="btn">Start Game 2</button>
+            <button id="game-2-back" class="back-btn">&#8592;</button>
+            <h1>Game 2: Word Recognition</h1>
+            <p>Click "Start!" to begin the 1-minute timer. The word will change every few seconds to simulate successful recognition.</p>
+            <span class="timer" id="game-2-timer">01:00</span>
+            <h2 id="current-word">hello</h2>
+            <span class="score-display" id="game-2-score">0</span>
+            <p id="game-2-feedback" class="feedback-message"></p>
+            <button id="start-game-2" class="btn">Start!</button>
         </div>
 
         <div id="settings-screen" class="screen">
-            <button class="back-btn" id="settings-back">&larr;</button>
+            <button id="settings-back" class="back-btn">&#8592;</button>
             <h1>Settings</h1>
-            <p>Choose your theme:</p>
-            <button id="light-mode-btn" class="btn">Light Mode</button>
-            <button id="dark-mode-btn" class="btn">Dark Mode</button>
+            <p>Customize your typing experience.</p>
+            <hr>
+            <div class="button-container">
+                <button id="light-mode-btn" class="btn">Light Mode</button>
+                <button id="dark-mode-btn" class="btn">Dark Mode</button>
+            </div>
         </div>
 
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
