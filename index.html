@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tongue Depressor App</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-image"></div>
+    <div class="app-container glass-card" id="app-container">
+        
+        <div id="connection-screen" class="screen active">
+            <h1 class="title">Tongue Depressor Tool</h1>
+            <p id="connection-status" class="status-message">Device is not connected.</p>
+            <div class="light-indicator red-light" id="device-light"></div>
+            <button id="connect-button" class="btn">Connect to Bluetooth</button>
+        </div>
+
+        <div id="mode-selection-screen" class="screen">
+            <h1 class="title">Choose a Mode</h1>
+            <button id="practice-mode-btn" class="btn">Practice Mode</button>
+            <button id="game-mode-btn" class="btn">Game Mode</button>
+        </div>
+
+        <div id="practice-screen" class="screen">
+            <h1 class="title">Practice Mode</h1>
+            <p class="instruction">Speak the words correctly 10 times.</p>
+            <div class="score-display">
+                <span id="practice-count">0</span> / 10
+            </div>
+            <p id="practice-feedback" class="feedback-message"></p>
+            <button id="back-to-modes-btn" class="btn">Back to Modes</button>
+        </div>
+
+        <div id="game-screen-1" class="screen">
+            <h1 class="title">Game Mode 1: Tongue Sensor</h1>
+            <p id="game-1-timer" class="timer">03:00</p>
+            <div class="score-display">
+                Score: <span id="game-1-score">0</span>
+            </div>
+            <p id="game-1-feedback" class="feedback-message"></p>
+            <button id="ready-btn" class="btn">Ready!</button>
+            <button id="back-to-modes-game-1" class="btn">Back to Modes</button>
+        </div>
+
+        <div id="game-screen-2" class="screen">
+            <h1 class="title">Game Mode 2: Word Recognition</h1>
+            <p id="game-2-timer" class="timer">01:00</p>
+            <p class="instruction">Say the word: "<span id="current-word">Hello</span>"</p>
+            <div class="score-display">
+                Score: <span id="game-2-score">0</span>
+            </div>
+            <p id="game-2-feedback" class="feedback-message"></p>
+            <button id="start-game-2" class="btn">Start Game 2</button>
+            <button id="back-to-modes-game-2" class="btn">Back to Modes</button>
+        </div>
+
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
