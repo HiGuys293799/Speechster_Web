@@ -168,6 +168,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Main Bluetooth connection function
     const connectToDevice = async () => {
+
+        // Check for Web Bluetooth support first
+    if (!navigator.bluetooth) {
+        handleConnectionStatus('Web Bluetooth is not supported in this browser.', 'dark-red-light');
+        connectButton.disabled = false;
+        return;
+    }
+
+    handleConnectionStatus('Connecting...', 'yellow-light', true);
+    connectButton.disabled = true;
+
         handleConnectionStatus('Connecting...', 'yellow-light', true);
         connectButton.disabled = true;
         try {
