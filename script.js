@@ -1,3 +1,7 @@
+console.log("[....] Booting Up....")
+
+console.log("[....] Load DOM")
+
 document.addEventListener('DOMContentLoaded', () => {
     // Select the body and root elements to toggle dark/light mode
     const root = document.documentElement;
@@ -5,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Get all necessary DOM elements
     const screens = document.querySelectorAll('.screen');
-    const appContainer = document.getElementById('app-container');
 
     const connectButton = document.getElementById('connect-button');
     const deviceLight = document.getElementById('device-light');
@@ -13,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const practiceCountDisplay = document.getElementById('practice-count');
     const practiceFeedback = document.getElementById('practice-feedback');
+    const practiceWordInput = document.getElementById('practice-word-input');
 
     const game1ScoreDisplay = document.getElementById('game-1-score');
     const game1TimerDisplay = document.getElementById('game-1-timer');
@@ -23,6 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const game2Feedback = document.getElementById('game-2-feedback');
     const currentWordDisplay = document.getElementById('current-word');
 
+    console.log("[DONE] Load DOM")
+
+    console.log("[....] Hardcode screenHeights")
+
     // Hardcoded heights for each screen for reliable resizing
     const screenHeights = {
         'mode-selection-screen': 500,
@@ -30,248 +38,251 @@ document.addEventListener('DOMContentLoaded', () => {
         'game-selection-screen': 400,
         'game-screen-1': 550,
         'game-screen-2': 630,
-        'settings-screen': 300
+        'settings-screen': 330
     };
 
-    // State variables
-    let practiceCount = 0;
+    console.log("[DONE] Hardcode screenHeights", screenHeights)
+
+    console.log("[....] Init Bluetooth")
+
+
+    // Bluetooth Variables
+    let device;
+    let rxCharacteristic;
+    const BLE_SERVICE_UUID = 'd53c18a6-3116-417f-a81e-14325f75c174';
+    const BLE_RX_CHARACTERISTIC_UUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
+    let isConnected = false;
+
+    console.log("[DONE] Init Bluetooth", BLE_SERVICE_UUID, BLE_RX_CHARACTERISTIC_UUID)
+
+    console.log("[....] Init Game Variables")
+    // Game 1 Variables
+    let game1TimerInterval;
     let game1Score = 0;
+    const game1Duration = 3 * 60; // 3 minutes in seconds
+    let game1TimeRemaining = game1Duration;
+
+    console.log("[DONE] Init Game 1 Variables", game1Duration)
+
+    // Game 2 Variables
+    let game2TimerInterval;
     let game2Score = 0;
-    let timerInterval;
-    let game1ScoreInterval;
-    let game2WordInterval;
-
-    // Dummy data for Game 2 words
-    const words = ["hello", "world", "apple", "banana", "cat", "dog"];
+    const game2Duration = 1 * 60; // 1 minute in seconds
+    let game2TimeRemaining = game2Duration;
+    const words = ['apple', 'banana', 'cherry', 'grape', 'kiwi', 'lemon', 'mango', 'orange', 'pear', 'plum'];
     let currentWordIndex = 0;
+    let lastSignalTime = 0;
 
-    // State variable to track the current active screen
-    let activeScreenId = 'mode-selection-screen';
+    console.log("[DONE] Init Game 2 Variables", game2Duration, words)
+    console.log("[DONE] Init Variables")
 
-    // === NEW CODE FOR MOUSE TRACKING ===
-    document.addEventListener('mousemove', (e) => {
-        const mouseX = e.clientX;
-        const mouseY = e.clientY;
-        body.style.setProperty('--mouse-x', `${mouseX}px`);
-        body.style.setProperty('--mouse-y', `${mouseY}px`);
-    });
+    // Functions
 
-    // --- Helper Functions ---
-    const showScreen = (screenId, isBack = false) => {
-        const currentScreen = document.getElementById(activeScreenId);
-        const newScreen = document.getElementById(screenId);
+    console.log("[....] Init Functions")
 
-        if (!newScreen) {
-            console.error(`Screen with ID "${screenId}" not found.`);
-            return;
+    function showScreen(screenId, animate = false) {
+        screens.forEach(screen => {
+            screen.classList.remove('active');
+        });
+        const activeScreen = document.getElementById(screenId);
+        if (activeScreen) {
+            activeScreen.classList.add('active');
+            adjustContainerHeight(screenId, animate);
         }
+    }
 
-        // Set the app container height based on the hardcoded value
-        appContainer.style.height = `${screenHeights[screenId]}px`;
-
-        if (currentScreen) {
-            currentScreen.classList.remove('active');
-            if (isBack) {
-                currentScreen.classList.add('slide-out-back');
-            } else {
-                currentScreen.classList.add('slide-out');
+    function adjustContainerHeight(screenId, animate) {
+        const height = screenHeights[screenId];
+        if (height) {
+            const container = document.getElementById('app-container');
+            if (container) {
+                if (animate) {
+                    container.style.transition = 'height 0.3s ease';
+                } else {
+                    container.style.transition = 'none';
+                }
+                container.style.height = `${height}px`;
             }
         }
+    }
 
-        newScreen.classList.add('active');
-        if (isBack) {
-            newScreen.classList.add('slide-in-back');
-        } else {
-            newScreen.classList.add('slide-in');
+    console.log("[....] Init BT Functions")
+
+    // Bluetooth Functions
+    const connectBluetooth = () => {
+    // Check if the browser supports Web Bluetooth
+    if (!navigator.bluetooth) {
+        bluetoothStatus.textContent = 'Web Bluetooth not supported.';
+        deviceLight.classList.remove('green-light');
+        deviceLight.classList.add('red-light');
+        console.error('Web Bluetooth is not supported in this browser.');
+        return; // Exit the function if not supported
+    }
+
+    console.log("Starting Bluetooth Device Scan....")
+    console.log("[DEBUG] Scanning for devices with serviceUUID", BLE_SERVICE_UUID)
+    bluetoothStatus.textContent = 'Connecting...';
+    // This part of the code should only run if the browser is compatible
+    navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] })
+        .then(device => {
+            console.log('Device selected:', device.name);
+            bluetoothStatus.textContent = 'Connected!';
+            deviceLight.classList.remove('red-light');
+            deviceLight.classList.add('green-light');
+            // ... rest of your connection logic
+        })
+        .catch(error => {
+            console.error('Connection failed:', error);
+            bluetoothStatus.textContent = 'Disconnected';
+            deviceLight.classList.remove('green-light');
+            deviceLight.classList.add('red-light');
+        });
+};
+
+
+    async function disconnectBluetooth() {
+        if (device && device.gatt.connected) {
+            device.gatt.disconnect();
         }
+        isConnected = false;
+        deviceLight.classList.remove('green-light');
+        deviceLight.classList.add('red-light');
+        bluetoothStatus.textContent = 'Disconnected';
+        connectButton.textContent = 'Connect';
+        console.log('Bluetooth device disconnected.');
+    }
 
-        if (currentScreen) {
-            currentScreen.addEventListener('animationend', () => {
-                currentScreen.classList.remove('slide-out', 'slide-out-back');
-            }, { once: true });
+    function onDisconnected(event) {
+        const disconnectedDevice = event.target;
+        console.log(`Device ${disconnectedDevice.name} is disconnected.`);
+        isConnected = false;
+        deviceLight.classList.remove('green-light');
+        deviceLight.classList.add('red-light');
+        bluetoothStatus.textContent = 'Disconnected';
+        connectButton.textContent = 'Connect';
+    }
+
+    function handleNotifications(event) {
+        let value = event.target.value;
+        const decoder = new TextDecoder('utf-8');
+        const decodedValue = decoder.decode(value);
+        console.log('Received: ' + decodedValue);
+
+        // Process the received data
+        const [mode, command] = decodedValue.split(',');
+        console.log(`Mode: ${mode}, Command: ${command}`);
+
+        if (mode === 'P') {
+            // Handle Practice Mode commands
+            if (command === '1') { // Assuming '1' means a key press
+                practiceCountDisplay.textContent = parseInt(practiceCountDisplay.textContent) + 1;
+                practiceFeedback.textContent = 'Correct!';
+            }
+        } else if (mode === 'G1') {
+            // Handle Game 1 commands
+            if (command === '1') {
+                game1Score += 1;
+                game1ScoreDisplay.textContent = game1Score;
+                game1Feedback.textContent = 'Touch!';
+            }
+        } else if (mode === 'G2') {
+            // Handle Game 2 commands
+            if (command.startsWith('w')) {
+                const word = command.substring(1);
+                const expectedWord = words[currentWordIndex];
+                if (word === expectedWord) {
+                    game2Score += 1;
+                    game2ScoreDisplay.textContent = game2Score;
+                    game2Feedback.textContent = 'Word Recognized!';
+                    currentWordIndex = (currentWordIndex + 1) % words.length;
+                    currentWordDisplay.textContent = words[currentWordIndex];
+                } else {
+                    game2Feedback.textContent = 'Incorrect word!';
+                }
+            }
         }
-        
-        newScreen.addEventListener('animationend', () => {
-            newScreen.classList.remove('slide-in', 'slide-in-back');
-        }, { once: true });
+    }
 
-        activeScreenId = screenId;
-    };
+    console.log("[DONE] Init BT Functions")
 
-    function startTimer(duration, display, callback) {
-        let timer = duration, minutes, seconds;
-        clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-            minutes = parseInt(timer / 60, 10);
-            seconds = parseInt(timer % 60, 10);
-            minutes = minutes < 10 ? "0" + minutes : minutes;
-            seconds = seconds < 10 ? "0" + seconds : seconds;
-            display.textContent = minutes + ":" + seconds;
-            if (--timer < 0) {
-                clearInterval(timerInterval);
-                callback();
+    // Game 1 Timer
+    function startGame1Timer() {
+        game1TimeRemaining = game1Duration;
+        game1Score = 0;
+        game1ScoreDisplay.textContent = game1Score;
+        game1TimerDisplay.textContent = formatTime(game1TimeRemaining);
+        game1Feedback.textContent = '';
+        game1TimerInterval = setInterval(() => {
+            game1TimeRemaining--;
+            game1TimerDisplay.textContent = formatTime(game1TimeRemaining);
+            if (game1TimeRemaining <= 0) {
+                clearInterval(game1TimerInterval);
+                game1Feedback.textContent = `Game Over! Final Score: ${game1Score}`;
+                game1TimeRemaining = game1Duration;
+                game1TimerDisplay.textContent = formatTime(game1TimeRemaining);
             }
         }, 1000);
     }
 
-    function resetPracticeMode() {
-        practiceCount = 0;
-        if (practiceCountDisplay) practiceCountDisplay.textContent = 0;
-        if (practiceFeedback) practiceFeedback.textContent = '';
-    }
-
-    function resetGame1() {
-        clearInterval(timerInterval);
-        clearInterval(game1ScoreInterval);
-        game1Score = 0;
-        if (game1ScoreDisplay) game1ScoreDisplay.textContent = 0;
-        if (game1TimerDisplay) game1TimerDisplay.textContent = "03:00";
-        if (game1Feedback) game1Feedback.textContent = "";
-    }
-
-    function getGame1Feedback(score) {
-        if (score >= 60) return "YOU ARE AN EXPERT NOW!";
-        if (score >= 30) return "Well done! Nice!";
-        if (score >= 20) return "Very well done! But still there is always room for improvement";
-        if (score >= 10) return "Not bad but you can improve!";
-        return "Keep practicing!";
-    }
-
-    function resetGame2() {
-        clearInterval(timerInterval);
-        clearInterval(game2WordInterval);
+    // Game 2 Timer
+    function startGame2Timer() {
+        game2TimeRemaining = game2Duration;
         game2Score = 0;
-        if (game2ScoreDisplay) game2ScoreDisplay.textContent = 0;
-        if (game2TimerDisplay) game2TimerDisplay.textContent = "01:00";
-        if (game2Feedback) game2Feedback.textContent = "";
+        game2ScoreDisplay.textContent = game2Score;
         currentWordIndex = 0;
-        if (currentWordDisplay) currentWordDisplay.textContent = words[currentWordIndex];
-    }
-
-    function getGame2Feedback(score) {
-        if (score >= 10) return "YOU ARE AN EXPERT NOW!";
-        if (score >= 7) return "Well done! Nice!";
-        if (score >= 5) return "Very well done!";
-        if (score >= 3) return "Not bad but you can improve!";
-        return "Keep practicing!";
-    }
-
-    // A reusable function to update the connection status
-    const handleConnectionStatus = (status, lightClass, blinking = false) => {
-        bluetoothStatus.textContent = status;
-        deviceLight.classList.remove('red-light', 'yellow-light', 'green-light', 'blinking');
-        deviceLight.classList.add(lightClass);
-        if (blinking) {
-            deviceLight.classList.add('blinking');
-        }
-    };
-
-    // Main Bluetooth connection function
-    const connectToDevice = async () => {
-
-        // Check for Web Bluetooth support first
-    if (!navigator.bluetooth) {
-        handleConnectionStatus('Web Bluetooth is not supported in this browser.', 'dark-red-light');
-        connectButton.disabled = false;
-        return;
-    }
-
-    handleConnectionStatus('Connecting...', 'yellow-light', true);
-    connectButton.disabled = true;
-
-        handleConnectionStatus('Connecting...', 'yellow-light', true);
-        connectButton.disabled = true;
-        try {
-            // Check if Web Bluetooth is supported
-            if (!navigator.bluetooth) {
-                throw new Error("Web Bluetooth is not supported in this browser.");
+        currentWordDisplay.textContent = words[currentWordIndex];
+        game2TimerDisplay.textContent = formatTime(game2TimeRemaining);
+        game2Feedback.textContent = '';
+        game2TimerInterval = setInterval(() => {
+            game2TimeRemaining--;
+            game2TimerDisplay.textContent = formatTime(game2TimeRemaining);
+            if (game2TimeRemaining <= 0) {
+                clearInterval(game2TimerInterval);
+                game2Feedback.textContent = `Game Over! Final Score: ${game2Score}`;
+                game2TimeRemaining = game2Duration;
+                game2TimerDisplay.textContent = formatTime(game2TimeRemaining);
             }
+        }, 1000);
+    }
 
-            // Prompt the user to select a device
-            const device = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true
-            });
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+    }
 
-            // Handle a successful connection
-            handleConnectionStatus(`Connected to ${device.name}`, 'green-light');
-            
-        } catch (error) {
-            // Handle connection errors or user cancellation
-            console.error('Bluetooth connection failed:', error);
-            handleConnectionStatus('Disconnected', 'red-light');
-        } finally {
-            connectButton.disabled = false;
-        }
-    };
+    console.log("[DONE] Init Fuctions")
 
-    // --- Main App Logic ---
-
-    // Set initial screen and container height on page load
-    window.addEventListener('DOMContentLoaded', () => {
-        appContainer.style.height = `${screenHeights[activeScreenId]}px`;
-        document.getElementById(activeScreenId).classList.add('active');
-    });
-
-    // Use a single event listener on the app container to handle all button clicks
-    appContainer.addEventListener('click', (event) => {
-        const target = event.target;
-        
-        // Check if the clicked element has the "btn" class
+    // Event Listeners
+    document.addEventListener('click', (e) => {
+        const target = e.target;
         if (target.classList.contains('btn')) {
             const buttonId = target.id;
-            
-            // Handle menu buttons
             switch (buttonId) {
                 case 'connect-button':
-                    connectToDevice();
-                    break;
-                case 'practice-mode-btn':
-                    showScreen('practice-screen');
-                    resetPracticeMode();
-                    break;
-                case 'game-mode-btn-1':
-                    showScreen('game-screen-1');
-                    resetGame1();
-                    break;
-                case 'game-mode-btn-2':
-                    showScreen('game-screen-2');
-                    resetGame2();
-                    break;
-                case 'settings-btn':
-                    showScreen('settings-screen');
-                    break;
-                case 'correct-btn':
-                    if (practiceCount < 10) {
-                        practiceCount++;
-                        practiceCountDisplay.textContent = practiceCount;
-                        if (practiceCount === 10) {
-                            practiceFeedback.textContent = "Perfect, you are doing great!";
-                        }
+                    if (isConnected) {
+                        disconnectBluetooth();
+                    } else {
+                        connectBluetooth();
                     }
                     break;
+                case 'practice-mode-btn':
+                    showScreen('practice-screen', true);
+                    break;
+                case 'game-mode-btn-1':
+                    showScreen('game-screen-1', true);
+                    break;
+                case 'game-mode-btn-2':
+                    showScreen('game-screen-2', true);
+                    break;
+                case 'settings-btn':
+                    showScreen('settings-screen', true);
+                    break;
                 case 'ready-btn':
-                    startTimer(180, game1TimerDisplay, () => {
-                        clearInterval(game1ScoreInterval);
-                        game1Feedback.textContent = getGame1Feedback(game1Score);
-                    });
-                    clearInterval(game1ScoreInterval);
-                    game1ScoreInterval = setInterval(() => {
-                        game1Score++;
-                        game1ScoreDisplay.textContent = game1Score;
-                    }, 1000);
+                    startGame1Timer();
                     break;
                 case 'start-game-2':
-                    startTimer(60, game2TimerDisplay, () => {
-                        clearInterval(game2WordInterval);
-                        game2Feedback.textContent = getGame2Feedback(game2Score);
-                    });
-                    clearInterval(game2WordInterval);
-                    game2WordInterval = setInterval(() => {
-                        game2Score++;
-                        game2ScoreDisplay.textContent = game2Score;
-                        currentWordIndex = (currentWordIndex + 1) % words.length;
-                        currentWordDisplay.textContent = words[currentWordIndex];
-                    }, 5000);
+                    startGame2Timer();
                     break;
                 case 'light-mode-btn':
                     document.body.classList.remove('dark-mode');
@@ -283,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
             }
         }
-        
+
         // Check if the clicked element has the "back-btn" class
         if (target.classList.contains('back-btn')) {
             const buttonId = target.id;
@@ -292,11 +303,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     showScreen('mode-selection-screen', true);
                     break;
                 case 'game-1-back':
-                    resetGame1();
+                    // Assuming you have a resetGame1 function
+                    // resetGame1();
+                    clearInterval(game1TimerInterval);
+                    game1TimeRemaining = game1Duration;
+                    game1TimerDisplay.textContent = formatTime(game1TimeRemaining);
+                    game1Feedback.textContent = '';
                     showScreen('mode-selection-screen', true);
                     break;
                 case 'game-2-back':
-                    resetGame2();
+                    // Assuming you have a resetGame2 function
+                    // resetGame2();
+                    clearInterval(game2TimerInterval);
+                    game2TimeRemaining = game2Duration;
+                    game2TimerDisplay.textContent = formatTime(game2TimeRemaining);
+                    game2Feedback.textContent = '';
                     showScreen('mode-selection-screen', true);
                     break;
                 case 'settings-back':
@@ -305,4 +326,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // Initial setup
+    showScreen('mode-selection-screen');
+
+    // Add this to handle the initial state of the app
+    // No login functions added, so the app is always visible
+    const appContainer = document.getElementById('app-container');
+    appContainer.style.display = 'block';
+    
+    console.log("[DONE] Boothing Up")
 });
+
