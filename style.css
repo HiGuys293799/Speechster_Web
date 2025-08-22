@@ -8,17 +8,17 @@
 :root {
     /* Dark Mode Defaults */
     --color-text: #f0f0f0;
-    --color-background-body: #111111;
-    --color-background-app: rgba(46, 46, 46, 0.411);
-    --color-border-app: #333;
+    --color-background-body: #141414;
+    --color-background-app: rgba(51, 51, 51, 0.411);
+    --color-border-app: rgba(255, 255, 255, 0.03); 
     --color-shadow-app: rgba(0, 0, 0, 0.2);
-    --color-button-background: #2a2a2a;
-    --color-button-border: #444;
-    --color-button-background-hover: #3a3a3a;
-    --color-border-hr: #444;
+    --color-button-background: rgba(255, 255, 255, 0.02);
+    --color-button-border: rgba(255, 255, 255, 0.08);
+    --color-button-background-hover: rgba(255, 255, 255, 0.05);
+    --color-border-hr: rgba(255, 255, 255, 0.15);
     --color-text-feedback: #fff;
     --color-back-btn: #fff;
-    --color-particle: rgba(255, 255, 255, 0.4); /* Increased opacity */
+    --color-particle: rgb(255, 255, 255);
 
     /* CSS variables for mouse position tracking (no longer used, but kept for future reference) */
     --mouse-x: 50vw;
@@ -28,17 +28,17 @@
 /* Light Mode Overrides */
 body.light-mode {
     --color-text: #333;
-    --color-background-body: rgb(177, 177, 177);
-    --color-background-app: rgba(216, 216, 216, 0.411);
-    --color-border-app: var(--color-background-app);
+    --color-background-body: #c5c5c5;
+    --color-background-app: rgba(236, 236, 236, 0.3); /* Less transparent */
+    --color-border-app: rgba(0, 0, 0, 0.03);
     --color-shadow-app: rgba(0, 0, 0, 0.08);
-    --color-button-background: var(--color-background-app);
-    --color-button-border: #d0d0d0;
-    --color-button-background-hover: #e9e9e9;
-    --color-border-hr: #ccc;
+    --color-button-background: rgba(0, 0, 0, 0.02);
+    --color-button-border: rgba(0, 0, 0, 0.08);
+    --color-button-background-hover: rgba(0, 0, 0, 0.05);
+    --color-border-hr: rgba(0, 0, 0, 0.1);
     --color-text-feedback: #333;
     --color-back-btn: #333;
-    --color-particle: rgba(0, 0, 0, 0.4); /* Increased opacity */
+    --color-particle: rgb(0, 0, 0);
 }
 
 body {
@@ -69,10 +69,16 @@ body {
 /* Individual Particle Styling */
 .particle {
     position: absolute;
-    background: var(--color-particle); /* Use the new variable */
-    filter: blur(4px); /* Increased blur for distant effect */
+    background: var(--color-particle);
+    filter: blur(1px); /* Subtle blur for all particles */
     opacity: 0;
     animation: fade-in 1s forwards;
+    transition: filter 0.5s ease-out; /* Add transition for a smooth effect */
+}
+
+/* New class for blurring particles on overlap */
+.particle-blur {
+    filter: blur(15px); /* Strong blur on overlap */
 }
 
 /* New shape classes */

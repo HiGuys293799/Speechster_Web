@@ -84,17 +84,20 @@ document.addEventListener('DOMContentLoaded', () => {
         mouse: {
             x: window.innerWidth / 2,
             y: window.innerHeight / 2,
-            prevX: window.innerWidth / 2,
-            prevY: window.innerHeight / 2,
-            vx: 0,
-            vy: 0
+            targetX: window.innerWidth / 2, // New target for snapping logic
+            targetY: window.innerHeight / 2, // New target for snapping logic
         },
         particleSettings: {
-            count: 130,
-            sizeRange: [0.001, 6],
-            mouseSensitivity: 0.01, // NEW: Control the sensitivity of particles to mouse movement
+            count: 1,
+            sizeRange: [10, 10],
+            mouseAttraction: 0.1, // Controls the "pull" of particles towards the mouse
+            mouseFollowDamping: 0.7, // Controls the "drag" or friction of the motion
+            randomness: 0.1, // Dictates how erratic the random motion is
+            randomSpeed: 0.5, // Controls the speed of the random motion
         },
-        particleShapes: ['shape-circle', 'shape-square', 'shape-triangle']
+        particleShapes: ['shape-circle', 'shape-square', 'shape-triangle'],
+        isSnapping: false,
+        snappedButton: null
     }; // End of appState object
 
     // ====================================================================
@@ -160,6 +163,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (score >= 3) return "Not bad but you can improve!";
         return "Keep practicing!";
     }; // End of getGame2Feedback function
+
+    /**
+     * @description Finds the nearest button to the mouse cursor within the app container.
+     * @param {number} mouseX The mouse's X coordinate.
+     * @param {number} mouseY The mouse's Y coordinate.
+     * @returns {HTMLElement | null} The nearest button element or null if no buttons are found.
+     */
+    const getNearestButton = (mouseX, mouseY) => {
+        const buttons = Array.from(DOM.appContainer.querySelectorAll('button'));
+        let nearestButton = null;
+        let minDistance = Infinity;
+
+        buttons.forEach(button => {
+            const rect = button.getBoundingClientRect();
+            const buttonCenterX = rect.left + rect.width / 2;
+            const buttonCenterY = rect.top + rect.height / 2;
+
+            const distance = Math.sqrt(Math.pow(buttonCenterX - mouseX, 2) + Math.pow(buttonCenterY - mouseY, 2));
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestButton = button;
+            }
+        });
+        return nearestButton;
+    }; // End of getNearestButton function
 
     // ====================================================================
     // 4. Core Application Logic
@@ -423,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 y: y,
                 vx: vx,
                 vy: vy,
+                originalShape: randomShape // Store the original shape
             };
 
             appState.particles.push(particleData);
@@ -430,24 +460,48 @@ document.addEventListener('DOMContentLoaded', () => {
         } // End of for loop
     }; // End of createParticles function
 
-    const animateParticles = () => {
-        // Debounce mouse movement to calculate acceleration
-        const dx = appState.mouse.x - appState.mouse.prevX;
-        const dy = appState.mouse.y - appState.mouse.prevY;
-        appState.mouse.prevX = appState.mouse.x;
-        appState.mouse.prevY = appState.mouse.y;
-
-        const accelerationX = dx * appState.particleSettings.mouseSensitivity;
-        const accelerationY = dy * appState.particleSettings.mouseSensitivity;
-        
+    /**
+     * @description Checks if a particle is colliding with the app container and applies a blur class.
+     */
+    const checkParticleCollision = () => {
+        const appRect = DOM.appContainer.getBoundingClientRect();
         appState.particles.forEach(p => {
-            // Apply acceleration to velocity
-            p.vx += accelerationX;
-            p.vy += accelerationY;
+            // Get the particle's current screen position
+            const particleRect = p.element.getBoundingClientRect();
 
-            // Dampen velocity over time
-            p.vx *= 0.98;
-            p.vy *= 0.98;
+            // Check for collision using AABB (Axis-Aligned Bounding Box) method
+            if (
+                particleRect.x < appRect.x + appRect.width &&
+                particleRect.x + particleRect.width > appRect.x &&
+                particleRect.y < appRect.y + appRect.height &&
+                particleRect.y + particleRect.height > appRect.y
+            ) {
+                p.element.classList.add('particle-blur');
+            } else {
+                p.element.classList.remove('particle-blur');
+            }
+        });
+    };
+
+    const animateParticles = () => {
+        const targetX = appState.isSnapping && appState.snappedButton ? appState.snappedButton.getBoundingClientRect().left + appState.snappedButton.offsetWidth / 2 : appState.mouse.x;
+        const targetY = appState.isSnapping && appState.snappedButton ? appState.snappedButton.getBoundingClientRect().top + appState.snappedButton.offsetHeight / 2 : appState.mouse.y;
+
+        appState.particles.forEach(p => {
+            // Apply random motion
+            p.vx += (Math.random() - 0.5) * appState.particleSettings.randomness * appState.particleSettings.randomSpeed;
+            p.vy += (Math.random() - 0.5) * appState.particleSettings.randomness * appState.particleSettings.randomSpeed;
+
+            // Calculate spring force towards mouse or snapped button
+            const dx = targetX - p.x;
+            const dy = targetY - p.y;
+            
+            p.vx += dx * appState.particleSettings.mouseAttraction;
+            p.vy += dy * appState.particleSettings.mouseAttraction;
+            
+            // Apply damping (friction)
+            p.vx *= appState.particleSettings.mouseFollowDamping;
+            p.vy *= appState.particleSettings.mouseFollowDamping;
 
             // Update particle position
             p.x += p.vx;
@@ -461,14 +515,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Apply transform for performance
             p.element.style.transform = `translate(${p.x}px, ${p.y}px)`;
+
+            // Change particle shape based on snapping state
+            if (appState.isSnapping) {
+                p.element.classList.remove('shape-circle', 'shape-triangle');
+                p.element.classList.add('shape-square');
+            } else {
+                p.element.classList.remove('shape-square');
+                p.element.classList.add(p.originalShape);
+            }
         }); // End of forEach loop
+
+        // Check for collision on every animation frame
+        checkParticleCollision();
 
         requestAnimationFrame(animateParticles);
     }; // End of animateParticles function
 
     window.addEventListener('mousemove', (e) => {
+        const appRect = DOM.appContainer.getBoundingClientRect();
         appState.mouse.x = e.clientX;
         appState.mouse.y = e.clientY;
+
+        // Check if mouse is inside app-container and below the halfway point
+        if (
+            e.clientX >= appRect.left &&
+            e.clientX <= appRect.right &&
+            e.clientY >= appRect.top + appRect.height / 2 &&
+            e.clientY <= appRect.bottom
+        ) {
+            appState.isSnapping = true;
+            appState.snappedButton = getNearestButton(e.clientX, e.clientY);
+        } else {
+            appState.isSnapping = false;
+            appState.snappedButton = null;
+        }
     });
 
     createParticles();
