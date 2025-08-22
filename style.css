@@ -1,5 +1,45 @@
-/* Universal Styles and Font (macOS-like) */
+/*
+ * Universal Styles and Variables
+ * A new, modular approach using CSS variables for easier theming.
+ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+/* Define CSS variables for theming */
+:root {
+    /* Dark Mode Defaults */
+    --color-text: #f0f0f0;
+    --color-background-body: #111111;
+    --color-background-app: rgba(46, 46, 46, 0.411);
+    --color-border-app: #333;
+    --color-shadow-app: rgba(0, 0, 0, 0.2);
+    --color-button-background: #2a2a2a;
+    --color-button-border: #444;
+    --color-button-background-hover: #3a3a3a;
+    --color-border-hr: #444;
+    --color-text-feedback: #fff;
+    --color-back-btn: #fff;
+    --color-particle: rgba(255, 255, 255, 0.4); /* Increased opacity */
+
+    /* CSS variables for mouse position tracking (no longer used, but kept for future reference) */
+    --mouse-x: 50vw;
+    --mouse-y: 50vh;
+}
+
+/* Light Mode Overrides */
+body.light-mode {
+    --color-text: #333;
+    --color-background-body: rgb(177, 177, 177);
+    --color-background-app: rgba(216, 216, 216, 0.411);
+    --color-border-app: var(--color-background-app);
+    --color-shadow-app: rgba(0, 0, 0, 0.08);
+    --color-button-background: var(--color-background-app);
+    --color-button-border: #d0d0d0;
+    --color-button-background-hover: #e9e9e9;
+    --color-border-hr: #ccc;
+    --color-text-feedback: #333;
+    --color-back-btn: #333;
+    --color-particle: rgba(0, 0, 0, 0.4); /* Increased opacity */
+}
 
 body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -11,52 +51,54 @@ body {
     overflow: hidden;
     position: relative;
     transition: background-color 0.5s ease;
-
-    /* CSS variables for mouse position tracking */
-    --mouse-x: 50vw;
-    --mouse-y: 50vh;
+    background-color: var(--color-background-body);
+    color: var(--color-text);
 }
 
-/* Mouse pointer spotlight effect */
-body::after {
-    content: '';
+/* Particle Background Container */
+#particle-container {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     pointer-events: none;
-    background: radial-gradient(
-        circle at var(--mouse-x) var(--mouse-y),
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.05) 15%,
-        transparent 30%
-    );
-    z-index: 10;
-    transition: background 0.2s ease-out;
+    z-index: 2; /* Place it above the app container */
 }
 
-/* Base background colors without a background image */
-body.light-mode {
-    background-color: #e0e0e0;
-    color: #333;
-}
-body.dark-mode {
-    /* Set a CSS variable for the gradient center position */
-    --gradient-center-position: 50%;
-    /* New gradient with brighter colors, shifted to bottom-right, and using a variable */
-    background: linear-gradient(to bottom right, #08162d 0%, #1e4591 var(--gradient-center-position), #08162d 100%);
-    color: #f0f0f0;
+/* Individual Particle Styling */
+.particle {
+    position: absolute;
+    background: var(--color-particle); /* Use the new variable */
+    filter: blur(4px); /* Increased blur for distant effect */
+    opacity: 0;
+    animation: fade-in 1s forwards;
 }
 
-/* Liquid Glass container */
+/* New shape classes */
+.shape-circle {
+    border-radius: 50%;
+}
+
+.shape-square {
+    border-radius: 4px;
+}
+
+.shape-triangle {
+    background: none;
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* macOS Sequoia Glass container */
 #app-container {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(30px) saturate(1.8);
-    -webkit-backdrop-filter: blur(30px) saturate(1.8);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--color-background-app);
+    border: 1px solid var(--color-border-app);
     border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 30px var(--color-shadow-app);
     text-align: center;
     width: 90%;
     max-width: 450px;
@@ -64,41 +106,28 @@ body.dark-mode {
     position: relative;
     transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
-    z-index: 10; /* Ensure the app container is above the mouse effect */
+    z-index: 1; /* Ensure the container is below the particles */
 }
 
 /* Page Transition Animations */
 @keyframes slide-in {
-    from {
-        transform: translateX(100%);
-    }
-    to {
-        transform: translateX(0);
-    }
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
 }
+
 @keyframes slide-out {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(-100%);
-    }
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
 }
+
 @keyframes slide-in-back {
-    from {
-        transform: translateX(-100%);
-    }
-    to {
-        transform: translateX(0);
-    }
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
 }
+
 @keyframes slide-out-back {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(100%);
-    }
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
 }
 
 .screen {
@@ -116,25 +145,26 @@ body.dark-mode {
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.5s ease;
-    transform: translateX(100%);
 }
 
 .screen.active {
     pointer-events: auto;
     opacity: 1;
-    transform: translateX(0);
-    z-index: 2;
 }
-.screen.active.slide-in {
+
+.screen.slide-in {
     animation: slide-in 0.5s forwards;
 }
-.screen.active.slide-in-back {
-    animation: slide-in-back 0.5s forwards;
-}
+
 .screen.slide-out {
     animation: slide-out 0.5s forwards;
     z-index: 1;
 }
+
+.screen.slide-in-back {
+    animation: slide-in-back 0.5s forwards;
+}
+
 .screen.slide-out-back {
     animation: slide-out-back 0.5s forwards;
     z-index: 1;
@@ -158,12 +188,12 @@ hr {
     margin: 15px 0;
     width: 80%;
     border: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    border-top: 1px solid var(--color-border-hr);
 }
 
 .btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: var(--color-button-background);
+    border: 1px solid var(--color-button-border);
     padding: 12px 25px;
     border-radius: 8px;
     color: inherit;
@@ -176,8 +206,8 @@ hr {
 }
 
 .btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+    background: var(--color-button-background-hover);
+    box-shadow: 0 0 12px var(--color-shadow-app);
 }
 
 .score-display, .timer {
@@ -195,23 +225,16 @@ hr {
     transition: color 0.3s ease;
 }
 
-.status-message {
-    font-size: 0.9em;
-    color: #e0e0e0;
-    margin-top: 8px;
-    min-height: 18px;
-}
-
 .back-btn {
     position: absolute;
-    top: var(--back-btn-top-position, 5px);
+    top: 15px;
     left: 15px;
     background: none;
     border: none;
     font-size: 2em;
     cursor: pointer;
     padding: 5px;
-    color: inherit;
+    color: var(--color-back-btn);
     opacity: 0.7;
     transition: opacity 0.2s ease;
     z-index: 3;
@@ -251,14 +274,12 @@ hr {
     animation: blink-yellow 1s infinite;
 }
 
-/* Flexbox for the new button container */
 .button-container {
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-/* New style to align buttons at the bottom edges */
 .bottom-buttons {
     display: flex;
     width: 100%;
@@ -267,7 +288,6 @@ hr {
     box-sizing: border-box;
 }
 
-/* Media Query for larger screens (laptops) */
 @media (min-width: 768px) {
     .button-container {
         flex-direction: row;
@@ -277,61 +297,4 @@ hr {
     .btn {
         flex-basis: auto;
     }
-}
-
-/* Practice Mode Specifics */
-#practice-word-input {
-    margin: 15px 0;
-}
-#practice-word-input label {
-    font-size: 1em;
-    font-weight: 400;
-}
-#practice-word-input input {
-    padding: 8px 12px;
-    font-size: 0.9em;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.05);
-    color: inherit;
-    text-align: center;
-    transition: all 0.2s ease;
-}
-
-#practice-word-input input:focus {
-    outline: none;
-    border-color: rgba(255, 255, 255, 0.6);
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
-}
-
-/* Light Mode Overrides */
-body.light-mode #app-container {
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(15px) saturate(1.8);
-    -webkit-backdrop-filter: blur(15px) saturate(1.8);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-}
-body.light-mode #app-container hr {
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-}
-body.light-mode .btn {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    color: #333;
-}
-body.light-mode .btn:hover {
-    background: rgba(0, 0, 0, 0.1);
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
-}
-body.light-mode #practice-word-input input {
-    background: rgba(0, 0, 0, 0.05);
-    color: #333;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-}
-body.light-mode .back-btn {
-    color: #333;
-}
-body.light-mode #device-light {
-    border: 1px solid #ccc;
 }

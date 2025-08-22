@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark-mode">
+
+    <div id="particle-container"></div>
+
     <div id="app-container">
 
         <div id="mode-selection-screen" class="screen active">
@@ -32,20 +35,16 @@
         <div id="practice-screen" class="screen">
             <button id="practice-back" class="back-btn">&#8592;</button>
             <h1>Practice Mode</h1>
-            <p>A simple mode to practice spelling and word recognition without a timer or score.</p>
-            <hr>
-            <div class="input-group">
-                <label for="practice-word-input">Current Word:</label>
-                <input type="text" id="practice-word-input" readonly>
-            </div>
+            <p>The screen will flash green when you successfully make a "pop" sound.</p>
             <span class="score-display" id="practice-count">0</span>
             <p id="practice-feedback" class="feedback-message"></p>
+            <button id="correct-btn" class="btn">Correct (simulate)</button>
         </div>
 
         <div id="game-screen-1" class="screen">
             <button id="game-1-back" class="back-btn">&#8592;</button>
-            <h1>Game 1: Timer Challenge</h1>
-            <p>Click "Start!" to begin the 3-minute timer. The score will increase every second to simulate sensor touches.</p>
+            <h1>Game 1: Tongue Sensor </h1>
+            <p>Click "Start!" to start the 3-minute timer. The score will increase every second to simulate sensor touches.</p>
             <span class="timer" id="game-1-timer">03:00</span>
             <span class="score-display" id="game-1-score">0</span>
             <p id="game-1-feedback" class="feedback-message"></p>
@@ -66,15 +65,16 @@
         <div id="settings-screen" class="screen">
             <button id="settings-back" class="back-btn">&#8592;</button>
             <h1>Settings</h1>
-            <p>Customize your typing experience.</p>
+            <p>Customize your experience.</p>
             <hr>
             <div class="button-container">
                 <button id="light-mode-btn" class="btn">Light Mode</button>
                 <button id="dark-mode-btn" class="btn">Dark Mode</button>
             </div>
         </div>
+
     </div>
-    
+
     <script src="script.js"></script>
 </body>
 </html>
