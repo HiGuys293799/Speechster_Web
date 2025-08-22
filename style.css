@@ -78,7 +78,7 @@ body {
 
 /* New class for blurring particles on overlap */
 .particle-blur {
-    filter: blur(15px); /* Strong blur on overlap */
+    filter: blur(10px); /* Strong blur on overlap */
 }
 
 /* New shape classes */

@@ -13,8 +13,8 @@
     <div id="app-container">
 
         <div id="mode-selection-screen" class="screen active">
-            <h1>Speechster 1000 (ALPHA)</h1>
-            <p>Welcome to the Speechster 1000 Web Interface. Please select a mode to begin.</p>
+            <h1>Speechster 1000</h1>
+            <p>Welcome to the Speechster 1000 Interface. Please select a mode to begin.</p>
             <hr>
             <div class="button-container">
                 <button id="practice-mode-btn" class="btn">Practice</button>
@@ -35,7 +35,7 @@
         <div id="practice-screen" class="screen">
             <button id="practice-back" class="back-btn">&#8592;</button>
             <h1>Practice Mode</h1>
-            <p>The screen will flash green when you successfully make a "pop" sound.</p>
+            <p>The screen will flash green when you successfully make the sound told by your therapist.</p>
             <span class="score-display" id="practice-count">0</span>
             <p id="practice-feedback" class="feedback-message"></p>
             <button id="correct-btn" class="btn">Correct (simulate)</button>
@@ -44,7 +44,7 @@
         <div id="game-screen-1" class="screen">
             <button id="game-1-back" class="back-btn">&#8592;</button>
             <h1>Game 1: Tongue Sensor </h1>
-            <p>Click "Start!" to start the 3-minute timer. The score will increase every second to simulate sensor touches.</p>
+            <p>Click "Start!" to start the 3-minute timer. The score will increase everytime you touch the top part of your mouth.</p>
             <span class="timer" id="game-1-timer">03:00</span>
             <span class="score-display" id="game-1-score">0</span>
             <p id="game-1-feedback" class="feedback-message"></p>
@@ -54,7 +54,7 @@
         <div id="game-screen-2" class="screen">
             <button id="game-2-back" class="back-btn">&#8592;</button>
             <h1>Game 2: Word Recognition</h1>
-            <p>Click "Start!" to begin the 1-minute timer. The word will change every few seconds to simulate successful recognition.</p>
+            <p>Click "Start!" to begin the 1-minute timer. The word will change every time you successfully say the word specified.</p>
             <span class="timer" id="game-2-timer">01:00</span>
             <h2 id="current-word">hello</h2>
             <span class="score-display" id="game-2-score">0</span>
