@@ -88,14 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
             targetY: window.innerHeight / 2, // New target for snapping logic
         },
         particleSettings: {
-            count: 1,
+            count: 10,
             sizeRange: [10, 10],
-            mouseAttraction: 0.1, // Controls the "pull" of particles towards the mouse
+            mouseAttraction: 0.03, // Controls the "pull" of particles towards the mouse
             mouseFollowDamping: 0.7, // Controls the "drag" or friction of the motion
             randomness: 0.1, // Dictates how erratic the random motion is
             randomSpeed: 0.5, // Controls the speed of the random motion
         },
-        particleShapes: ['shape-circle', 'shape-square', 'shape-triangle'],
+        particleShapes: ['shape-circle'],
         isSnapping: false,
         snappedButton: null
     }; // End of appState object
@@ -261,53 +261,75 @@ document.addEventListener('DOMContentLoaded', () => {
     // ====================================================================
     // 5. Bluetooth/Connectivity Logic
     // ====================================================================
-
-    /**
-     * @description Updates the visual status of the device connection light and text.
-     * @param {string} statusText - The text to display.
-     * @param {string} lightClass - The class for the device light (e.g., 'green-light').
-     * @param {boolean} [blinking=false] - Whether the light should blink.
-     */
-    const updateConnectionStatus = (statusText, lightClass, blinking = false) => {
-        DOM.status.bluetoothStatus.textContent = statusText;
-        DOM.status.deviceLight.className = '';
-        DOM.status.deviceLight.classList.add(lightClass);
-        if (blinking) {
-            DOM.status.deviceLight.classList.add('blinking');
-        }
-    }; // End of updateConnectionStatus function
-
-    /**
-     * @description Handles the Web Bluetooth connection process.
-     */
-    const connectToDevice = async () => {
-        console.log("[LOG] Attempting to connect to a Bluetooth device...");
-
-        if (!navigator.bluetooth) {
-            updateConnectionStatus('Web Bluetooth is not supported in this browser.', 'dark-red-light');
-            DOM.buttons.connect.disabled = false;
-            console.error("[ERROR] Web Bluetooth is not supported.");
-            return;
+    class BluetoothManager {
+        /**
+         * @param {object} elements - The DOM elements to update for status display.
+         */
+        constructor(elements) {
+            this.statusLight = elements.deviceLight;
+            this.statusText = elements.bluetoothStatus;
+            this.connectButton = elements.connect;
+            this.device = null;
         }
 
-        updateConnectionStatus('Connecting...', 'yellow-light', true);
-        DOM.buttons.connect.disabled = true;
-
-        try {
-            const device = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true
-            });
-
-            console.log(`[LOG] Successfully found device: ${device.name}`);
-            updateConnectionStatus(`Connected to ${device.name}`, 'green-light');
-            
-        } catch (error) {
-            console.error(`[ERROR] Bluetooth connection failed:`, error);
-            updateConnectionStatus('Disconnected', 'red-light');
-        } finally {
-            DOM.buttons.connect.disabled = false;
+        /**
+         * @description Updates the visual status of the device connection light and text.
+         * @param {string} text - The text to display.
+         * @param {string} lightClass - The class for the device light (e.g., 'green-light').
+         * @param {boolean} [blinking=false] - Whether the light should blink.
+         */
+        updateStatus(text, lightClass, blinking = false) {
+            this.statusText.textContent = text;
+            this.statusLight.className = '';
+            this.statusLight.classList.add(lightClass);
+            if (blinking) {
+                this.statusLight.classList.add('blinking');
+            }
         }
-    }; // End of connectToDevice function
+
+        /**
+         * @description Handles the Web Bluetooth connection process with service and characteristic filters.
+         */
+        async connect() {
+            console.log("[LOG] Attempting to connect to a Bluetooth device...");
+
+            if (!navigator.bluetooth) {
+                this.updateStatus('Web Bluetooth is not supported in this browser.', 'dark-red-light');
+                this.connectButton.disabled = false;
+                console.error("[ERROR] Web Bluetooth is not supported.");
+                return;
+            }
+
+            this.updateStatus('Connecting...', 'yellow-light', true);
+            this.connectButton.disabled = true;
+
+            const serviceUUID = 'd53c18a6-3116-417f-a81e-14325f75c174'; // REPLACE WITH YOUR SERVICE UUID
+            const characteristicUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a8'; // REPLACE WITH YOUR CHARACTERISTIC UUID
+
+            try {
+                this.device = await navigator.bluetooth.requestDevice({
+                    filters: [{
+                        services: [serviceUUID]
+                    }],
+                    optionalServices: [serviceUUID]
+                });
+
+                // For future functionality, you would get the service and characteristic here
+                // const server = await this.device.gatt.connect();
+                // const service = await server.getPrimaryService(serviceUUID);
+                // const characteristic = await service.getCharacteristic(characteristicUUID);
+
+                console.log(`[LOG] Successfully found device: ${this.device.name}`);
+                this.updateStatus(`Connected to ${this.device.name}`, 'green-light');
+                
+            } catch (error) {
+                console.error(`[ERROR] Bluetooth connection failed:`, error);
+                this.updateStatus('Disconnected', 'red-light');
+            } finally {
+                this.connectButton.disabled = false;
+            }
+        }
+    } // End of BluetoothManager class
     
     // ====================================================================
     // 6. Event Handlers
@@ -326,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (target.classList.contains('btn')) {
             switch (buttonId) {
                 case DOM.buttons.connect.id:
-                    connectToDevice();
+                    bluetoothManager.connect();
                     break;
                 case DOM.buttons.practiceMode.id:
                     showScreen(DOM.screens.practice.id);
@@ -407,6 +429,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set initial screen and container height on page load.
     DOM.appContainer.style.height = `${appState.screenHeights[appState.activeScreenId]}px`;
     DOM.screens.modeSelection.classList.add('active');
+
+    // Initialize the Bluetooth Manager
+    const bluetoothManager = new BluetoothManager({
+        deviceLight: DOM.status.deviceLight,
+        bluetoothStatus: DOM.status.bluetoothStatus,
+        connect: DOM.buttons.connect
+    });
 
     // Centralized event listener for all button clicks.
     DOM.appContainer.addEventListener('click', handleButtonClick);
