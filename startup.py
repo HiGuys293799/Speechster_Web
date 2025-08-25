@@ -11,5 +11,5 @@ Handler = http.server.SimpleHTTPRequestHandler
 http = socketserver.TCPServer(("", PORT), Handler)
 
 # Getting logs
-print("serving at port", PORT)
+print("Serving at port:", PORT)
 http.serve_forever()
