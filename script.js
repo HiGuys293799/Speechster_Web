@@ -581,7 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // This is where your Firebase project's configuration will go.
 // YOU MUST REPLACE ALL "YOUR_..." PLACEHOLDERS WITH YOUR ACTUAL VALUES.
 const firebaseConfig = {
-    apiKey: "AIzaSyC4o7uIHSqRChe0k5LZOfnFDCr-vBWoqvY",
+    apiKey: "BIzaSyC4o7uIHSqRChe0k5LZOfnFDCr-vBWoqvY.",
     authDomain: "speechster-1000.firebaseapp.com",
     projectId: "speechster-1000",
     storageBucket: "speechster-1000.appspot.com",
