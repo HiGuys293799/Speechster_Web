@@ -84,8 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
         mouse: {
             x: window.innerWidth / 2,
             y: window.innerHeight / 2,
-            targetX: window.innerWidth / 2, // New target for snapping logic
-            targetY: window.innerHeight / 2, // New target for snapping logic
         },
         particleSettings: {
             count: 10,
@@ -95,9 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
             randomness: 0.1, // Dictates how erratic the random motion is
             randomSpeed: 0.5, // Controls the speed of the random motion
         },
-        particleShapes: ['shape-circle'],
-        isSnapping: false,
-        snappedButton: null
+        particleShapes: ['shape-circle']
     }; // End of appState object
 
     // ====================================================================
@@ -163,32 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (score >= 3) return "Not bad but you can improve!";
         return "Keep practicing!";
     }; // End of getGame2Feedback function
-
-    /**
-     * @description Finds the nearest button to the mouse cursor within the app container.
-     * @param {number} mouseX The mouse's X coordinate.
-     * @param {number} mouseY The mouse's Y coordinate.
-     * @returns {HTMLElement | null} The nearest button element or null if no buttons are found.
-     */
-    const getNearestButton = (mouseX, mouseY) => {
-        const buttons = Array.from(DOM.appContainer.querySelectorAll('button'));
-        let nearestButton = null;
-        let minDistance = Infinity;
-
-        buttons.forEach(button => {
-            const rect = button.getBoundingClientRect();
-            const buttonCenterX = rect.left + rect.width / 2;
-            const buttonCenterY = rect.top + rect.height / 2;
-
-            const distance = Math.sqrt(Math.pow(buttonCenterX - mouseX, 2) + Math.pow(buttonCenterY - mouseY, 2));
-
-            if (distance < minDistance) {
-                minDistance = distance;
-                nearestButton = button;
-            }
-        });
-        return nearestButton;
-    }; // End of getNearestButton function
 
     // ====================================================================
     // 4. Core Application Logic
@@ -513,8 +483,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const animateParticles = () => {
-        const targetX = appState.isSnapping && appState.snappedButton ? appState.snappedButton.getBoundingClientRect().left + appState.snappedButton.offsetWidth / 2 : appState.mouse.x;
-        const targetY = appState.isSnapping && appState.snappedButton ? appState.snappedButton.getBoundingClientRect().top + appState.snappedButton.offsetHeight / 2 : appState.mouse.y;
+        const targetX = appState.mouse.x;
+        const targetY = appState.mouse.y;
 
         appState.particles.forEach(p => {
             // Apply random motion
@@ -544,15 +514,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Apply transform for performance
             p.element.style.transform = `translate(${p.x}px, ${p.y}px)`;
-
-            // Change particle shape based on snapping state
-            if (appState.isSnapping) {
-                p.element.classList.remove('shape-circle', 'shape-triangle');
-                p.element.classList.add('shape-square');
-            } else {
-                p.element.classList.remove('shape-square');
-                p.element.classList.add(p.originalShape);
-            }
+            
         }); // End of forEach loop
 
         // Check for collision on every animation frame
@@ -562,23 +524,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }; // End of animateParticles function
 
     window.addEventListener('mousemove', (e) => {
-        const appRect = DOM.appContainer.getBoundingClientRect();
         appState.mouse.x = e.clientX;
         appState.mouse.y = e.clientY;
-
-        // Check if mouse is inside app-container and below the halfway point
-        if (
-            e.clientX >= appRect.left &&
-            e.clientX <= appRect.right &&
-            e.clientY >= appRect.top + appRect.height / 2 &&
-            e.clientY <= appRect.bottom
-        ) {
-            appState.isSnapping = true;
-            appState.snappedButton = getNearestButton(e.clientX, e.clientY);
-        } else {
-            appState.isSnapping = false;
-            appState.snappedButton = null;
-        }
     });
 
     createParticles();
