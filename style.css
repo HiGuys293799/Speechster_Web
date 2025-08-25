@@ -76,11 +76,12 @@ body {
     opacity: 0;
     animation: fade-in 1s forwards;
     transition: filter 0.5s ease-out; /* Add transition for a smooth effect */
+    will-change: transform;
 }
 
 /* New class for blurring particles on overlap */
 .particle-blur {
-    filter: blur(10px); /* Strong blur on overlap */
+    filter: blur(1px); /* Strong blur on overlap */
 }
 
 /* New shape classes */

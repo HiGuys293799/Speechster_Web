@@ -3,6 +3,25 @@
  * Optimized, modular, and debug-friendly JavaScript.
  */
 
+// ====================================================================
+// Firebase SDK and Auth Imports
+// These MUST be at the very top of the file.
+// ====================================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword,
+    updateProfile
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { 
+    getDatabase, 
+    ref, 
+    onValue, // Import the onValue function
+    set 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+
 console.log("[LOG] --- Speechester 1000 Booting Up ---");
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -513,7 +532,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (p.y > window.innerHeight + 10) p.y = -10;
 
             // Apply transform for performance
-            p.element.style.transform = `translate(${p.x}px, ${p.y}px)`;
+            // The use of translateZ(0) helps force hardware acceleration.
+            p.element.style.transform = `translate3d(${p.x}px, ${p.y}px, 0)`;
             
         }); // End of forEach loop
 
@@ -531,6 +551,117 @@ document.addEventListener('DOMContentLoaded', () => {
     createParticles();
     animateParticles();
 
+    // ====================================================================
+    // Firebase Listeners - Moved inside DOMContentLoaded
+    // ====================================================================
+    const connectedRef = ref(db, '.info/connected');
+    onValue(connectedRef, (snap) => {
+      if (snap.val() === true) {
+        console.log("[LOG] Successfully connected to Firebase Realtime Database.");
+        DOM.status.deviceLight.classList.remove('red-light');
+        DOM.status.deviceLight.classList.add('green-light');
+        DOM.status.bluetoothStatus.textContent = 'Connected';
+      } else {
+        console.warn("[WARN] Disconnected from Firebase Realtime Database.");
+        DOM.status.deviceLight.classList.remove('green-light');
+        DOM.status.deviceLight.classList.add('red-light');
+        DOM.status.bluetoothStatus.textContent = 'Disconnected';
+      }
+    });
+
     console.log("[LOG] --- Speechester 1000 Initialization Complete ---");
 
 }); // End of DOMContentLoaded event listener
+
+// ====================================================================
+// Firebase Login/Registration Functions
+// Add this block to your script.js file
+// ====================================================================
+
+// This is where your Firebase project's configuration will go.
+// YOU MUST REPLACE ALL "YOUR_..." PLACEHOLDERS WITH YOUR ACTUAL VALUES.
+const firebaseConfig = {
+    apiKey: "AIzaSyC4o7uIHSqRChe0k5LZOfnFDCr-vBWoqvY",
+    authDomain: "speechster-1000.firebaseapp.com",
+    projectId: "speechster-1000",
+    storageBucket: "speechster-1000.appspot.com",
+    messagingSenderId: "543492593404",
+    appId: "1:543492593404:web:df0f06a3db1af716626979",
+    databaseURL: "https://speechster-1000.asia-south2.firebasedatabase.app/"
+};
+
+// Initialize Firebase App and get Auth service
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+/**
+ * @description Prompts the user for credentials and registers them with Firebase.
+ * This function should be called from the browser's console.
+ * It's a simple, non-UI-based registration process.
+ */
+window.registerUser = async () => {
+    const email = prompt("Please enter your email:");
+    const password = prompt("Please enter your password:");
+    const username = prompt("Please enter your username:");
+    const designation = prompt("Are you a 'doctor' or a 'patient'?");
+
+    if (!email || !password || !username || (designation !== 'doctor' && designation !== 'patient')) {
+        console.error("Registration aborted. All fields are required and designation must be 'doctor' or 'patient'.");
+        return;
+    }
+
+    try {
+        console.log(`Attempting to register user: ${email}`);
+        
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Save username and designation to Firebase Auth
+        await updateProfile(user, {
+            displayName: username
+        });
+
+        // Save designation and username to Firebase Realtime Database
+        await set(ref(db, 'users/' + user.uid), {
+            username: username,
+            email: email,
+            designation: designation
+        });
+
+        console.log("Registration successful!");
+        console.log("User:", user);
+
+    } catch (error) {
+        console.error("Error during registration:", error.message);
+    }
+};
+
+/**
+ * @description Prompts the user for credentials and logs them in with Firebase.
+ * This function should also be called from the browser's console.
+ */
+window.loginUser = async () => {
+    const email = prompt("Please enter your email:");
+    const password = prompt("Please enter your password:");
+
+    if (!email || !password) {
+        console.error("Login aborted. Both email and password are required.");
+        return;
+    }
+
+    try {
+        console.log(`Attempting to log in user: ${email}`);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        console.log("Login successful!");
+        // Added console logs to print user details
+        console.log(`User Logged In:`);
+        console.log(`  - Username: ${user.displayName}`);
+        console.log(`  - Email: ${user.email}`);
+
+    } catch (error) {
+        console.error("Error during login:", error.message);
+    }
+};
