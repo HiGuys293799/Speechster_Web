@@ -39,6 +39,7 @@ body.light-mode {
     --color-text-feedback: #333;
     --color-back-btn: #333;
     --color-particle: rgb(0, 0, 0);
+    cursor: none;
 }
 
 body {
@@ -53,6 +54,7 @@ body {
     transition: background-color 0.5s ease;
     background-color: var(--color-background-body);
     color: var(--color-text);
+    cursor: none;
 }
 
 /* Particle Background Container */
@@ -113,6 +115,7 @@ body {
     transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     z-index: 1; /* Ensure the container is below the particles */
+    cursor: none;
 }
 
 /* Page Transition Animations */
@@ -151,6 +154,7 @@ body {
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.5s ease;
+    cursor: none;
 }
 
 .screen.active {
@@ -209,6 +213,7 @@ hr {
     margin: 8px;
     transition: all 0.2s ease;
     backdrop-filter: blur(8px);
+    cursor: none;
 }
 
 .btn:hover {
