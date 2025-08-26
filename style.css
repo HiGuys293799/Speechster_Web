@@ -117,8 +117,24 @@ body {
     overflow: hidden;
     z-index: 1; /* Ensure the container is below the particles */
     cursor: none;
+    overflow-y: auto; /* Enables vertical scrolling when content overflows */
+    padding: 20px;
+    height: auto; /* Allow the height to adjust based on content */
+    max-height: 85vh; /* Sets a maximum height for the container, preventing it from taking up the whole screen */
+    -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+    scrollbar-width: none;  /* Hide scrollbar for Firefox */
+
 }
 
+/* Hide scrollbar for Chrome, Safari and Opera */
+#app-container::-webkit-scrollbar {
+    display: none;
+}
+
+#patient-dashboard-screen {
+    height: 120%; /* Ensures the screen content fills the entire container */
+    max-height: none; /* Override any previous max-height */
+}
 /* Page Transition Animations */
 @keyframes slide-in {
     from { transform: translateX(100%); }
