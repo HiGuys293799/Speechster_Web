@@ -39,8 +39,8 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
+export const auth = getAuth(app);
+export const db = getDatabase(app);
 
 // ====================================================================
 // Core Database Write Function
@@ -101,8 +101,6 @@ window.registerUser = async () => {
     } catch (error) {
         console.error("Error during registration:", error.message);
     }
-
-    if (designation === 'patient'){window.location.href = "/patient/patient.html";};
 };
 
 window.loginUser = async () => {
@@ -160,14 +158,12 @@ window.loginUser = async () => {
                 console.log("[LOG] Patient data structure already exists.");
             }
             // Redirect patient to their specific dashboard
-            window.location.href = "/patient/patient.html";
+            window.location.href = "patient/patient.html";
         }
         
     } catch (error) {
         console.error("Error during login:", error.message);
     }
-
-    if (designation === 'patient'){window.location.href = "/patient/patient.html";};
 };
 
 window.logoutUser = async () => {
@@ -181,64 +177,7 @@ window.logoutUser = async () => {
     }
 };
 
-// ====================================================================
-// Patient-Specific Functions
-// ====================================================================
-window.fetchAndDisplayPatientData = async () => {
-    const patientDataContainer = document.getElementById('patient-info-container');
-    patientDataContainer.innerHTML = '<h2>Loading Patient Data...</h2>';
 
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            console.log(`[LOG] Authenticated as patient: ${user.uid}`);
-            const dataPath = `users/patients/${user.uid}/data`;
-            const dataRef = ref(db, dataPath);
-            
-            try {
-                const snapshot = await get(dataRef);
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    console.log(`[LOG] Data retrieved successfully:`, data);
-                    
-                    patientDataContainer.innerHTML = '<h2>My Progress</h2><hr>';
-                    for (const key in data) {
-                        if (data.hasOwnProperty(key)) {
-                            const section = document.createElement('div');
-                            section.className = 'data-section';
-                            
-                            const heading = document.createElement('h3');
-                            heading.textContent = key;
-                            section.appendChild(heading);
-                            
-                            const ul = document.createElement('ul');
-                            for (const subKey in data[key]) {
-                                if (data[key].hasOwnProperty(subKey)) {
-                                    const li = document.createElement('li');
-                                    li.textContent = `${subKey}: ${JSON.stringify(data[key][subKey])}`;
-                                    ul.appendChild(li);
-                                }
-                            }
-                            section.appendChild(ul);
-                            patientDataContainer.appendChild(section);
-                        }
-                    }
-                } else {
-                    console.warn(`[WARN] No data found at path: ${dataPath}`);
-                    patientDataContainer.innerHTML = '<h2>No Data Found</h2><p>Looks like there is no progress data recorded yet. Please start practicing or playing games!</p>';
-                }
-            } catch (error) {
-                console.error("[ERROR] Failed to fetch patient data:", error.message);
-                patientDataContainer.innerHTML = '<h2>Error</h2><p>Failed to retrieve data. Please try again later.</p>';
-            }
-        } else {
-            console.warn("[WARN] No user is authenticated. Redirecting to home.");
-            patientDataContainer.innerHTML = '<h2>Unauthorized</h2><p>You must be logged in to view this page. Redirecting...</p>';
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 3000);
-        }
-    });
-};
 
 // ====================================================================
 // Main Application Logic - Inside DOMContentLoaded
@@ -318,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         particleSettings: {
             count: 10,
             sizeRange: [10, 10],
-            mouseAttraction: 0.05,
+            mouseAttraction: 0.03,
             mouseFollowDamping: 0.7,
             randomness: 0.1,
             randomSpeed: 0.5,
@@ -600,104 +539,38 @@ document.addEventListener('DOMContentLoaded', () => {
     onValue(connectedRef, (snap) => {
       if (snap.val() === true) {
         console.log("[LOG] Successfully connected to Firebase Realtime Database.");
+        if(DOM.status.deviceLight) {
+            DOM.status.deviceLight.classList.remove('red-light');
+            DOM.status.deviceLight.classList.add('green-light');
+        }
+        if(DOM.status.bluetoothStatus) DOM.status.bluetoothStatus.textContent = 'Connected';
       } else {
-        console.log("[WARN] Disconnected from Firebase Realtime Database.");
+        console.warn("[WARN] Disconnected from Firebase Realtime Database.");
+        if(DOM.status.deviceLight) {
+            DOM.status.deviceLight.classList.remove('green-light');
+            DOM.status.deviceLight.classList.add('red-light');
+        }
+        if(DOM.status.bluetoothStatus) DOM.status.bluetoothStatus.textContent = 'Disconnected';
       }
     });
 
     console.log("[LOG] --- Speechester 1000 Initialization Complete ---");
 
-}); // End of DOMContentLoaded event listener
-
-// ====================================================================
-// Firebase Login/Registration Functions
-// Add this block to your script.js file
-// ====================================================================
-
-// This is where your Firebase project's configuration will go.
-// YOU MUST REPLACE ALL "YOUR_..." PLACEHOLDERS WITH YOUR ACTUAL VALUES.
-const firebaseConfig = {
-    apiKey: "BIzaSyC4o7uIHSqRChe0k5LZOfnFDCr-vBWoqvY.",
-    authDomain: "speechster-1000.firebaseapp.com",
-    projectId: "speechster-1000",
-    storageBucket: "speechster-1000.appspot.com",
-    messagingSenderId: "543492593404",
-    appId: "1:543492593404:web:df0f06a3db1af716626979",
-    databaseURL: "https://speechster-1000.asia-south2.firebasedatabase.app/"
-};
-
-// Initialize Firebase App and get Auth service
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
-
-/**
- * @description Prompts the user for credentials and registers them with Firebase.
- * This function should be called from the browser's console.
- * It's a simple, non-UI-based registration process.
- */
-window.registerUser = async () => {
-    const email = prompt("Please enter your email:");
-    const password = prompt("Please enter your password:");
-    const username = prompt("Please enter your username:");
-    const designation = prompt("Are you a 'doctor' or a 'patient'?");
-
-    if (!email || !password || !username || (designation !== 'doctor' && designation !== 'patient')) {
-        console.error("Registration aborted. All fields are required and designation must be 'doctor' or 'patient'.");
-        return;
+    // Call fetchAndDisplayPatientData if on the patient page
+    if(document.getElementById('patient-info-container')) {
+        fetchAndDisplayPatientData();
     }
+});
 
-    try {
-        console.log(`Attempting to register user: ${email}`);
-        
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // Save username and designation to Firebase Auth
-        await updateProfile(user, {
-            displayName: username
-        });
-
-        // Save designation and username to Firebase Realtime Database
-        await set(ref(db, 'users/' + user.uid), {
-            username: username,
-            email: email,
-            designation: designation
-        });
-
-        console.log("Registration successful!");
-        console.log("User:", user);
-
-    } catch (error) {
-        console.error("Error during registration:", error.message);
-    }
-};
-
-/**
- * @description Prompts the user for credentials and logs them in with Firebase.
- * This function should also be called from the browser's console.
- */
-window.loginUser = async () => {
-    const email = prompt("Please enter your email:");
-    const password = prompt("Please enter your password:");
-
-    if (!email || !password) {
-        console.error("Login aborted. Both email and password are required.");
-        return;
-    }
-
-    try {
-        console.log(`Attempting to log in user: ${email}`);
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        console.log("Login successful!");
-        // Added console logs to print user details
-        console.log(`User Logged In:`);
-        console.log(`  - Username: ${user.displayName}`);
-        console.log(`  - Email: ${user.email}`);
-
-    } catch (error) {
-        console.error("Error during login:", error.message);
+const sendDataOnUnload = (url, data) => {
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    if (navigator.sendBeacon) {
+        const success = navigator.sendBeacon(url, blob);
+        if (!success) console.warn("sendBeacon failed. Data may not have been sent.");
+    } else {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", url, false);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.send(blob);
     }
 };

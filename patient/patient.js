@@ -1,95 +1,65 @@
-/*
- * Speechster 1000 - Patient Dashboard Logic
- * This file handles all patient-specific functionality.
- */
+// ====================================================================
+// Firebase Imports for Auth State Management
+// ====================================================================
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { get, ref } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { auth, db } from "../script.js";
 
 // ====================================================================
-// Firebase SDK and Auth Imports
+// Patient-Specific Functions
 // ====================================================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+window.fetchAndDisplayPatientData = async () => {
+    const patientDataContainer = document.getElementById('patient-info-container');
+    patientDataContainer.innerHTML = '<h2>Loading Patient Data...</h2>';
 
-// ====================================================================
-// Firebase Configuration and Initialization
-// (Note: This is repeated in patient.js for standalone functionality)
-// ====================================================================
-const firebaseConfig = {
-    apiKey: "AIzaSyC4o7uIHSqRChe0k5LZOfnFDCr-vBWoqvY",
-    authDomain: "speechster-1000.firebaseapp.com",
-    projectId: "speechster-1000",
-    storageBucket: "speechster-1000.appspot.com",
-    messagingSenderId: "543492593404",
-    appId: "1:543492593404:web:df0f06a3861c8340d85a1a",
-    databaseURL: "https://speechster-1000-default-rtdb.firebaseio.com"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
-
-// DOM references for the patient dashboard
-const DOM = {
-    buttons: {
-        dashboardBack: document.getElementById('dashboard-back-btn')
-    },
-    dashboard: {
-        username: document.getElementById('dashboard-username'),
-        email: document.getElementById('dashboard-email'),
-        designation: document.getElementById('dashboard-designation'),
-        testData: document.getElementById('test-data-display')
-    }
-};
-
-/**
- * @description Fetches and displays patient data from Firebase Realtime Database.
- * This function uses a real-time listener (onValue) to update automatically.
- */
-const getPatientData = (user) => {
-    if (user) {
-        const userRef = ref(db, `users/${user.uid}`);
-        onValue(userRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                DOM.dashboard.username.textContent = data.username || 'N/A';
-                DOM.dashboard.email.textContent = data.email || 'N/A';
-                DOM.dashboard.designation.textContent = data.designation || 'N/A';
-                
-                // Displaying test data if it exists
-                const testData = data.Test_Write || 'No test data found.';
-                DOM.dashboard.testData.textContent = testData;
-
-                console.log("Patient data updated in real-time:", data);
-            } else {
-                console.warn("No user data available for this UID.");
-                DOM.dashboard.username.textContent = 'N/A';
-                DOM.dashboard.email.textContent = 'N/A';
-                DOM.dashboard.designation.textContent = 'N/A';
-                DOM.dashboard.testData.textContent = 'No test data found.';
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            console.log(`[LOG] Authenticated as patient: ${user.uid}`);
+            const dataPath = `users/patients/${user.uid}/data`;
+            const dataRef = ref(db, dataPath);
+            
+            try {
+                const snapshot = await get(dataRef);
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    console.log(`[LOG] Data retrieved successfully:`, data);
+                    
+                    patientDataContainer.innerHTML = '<h2>My Progress</h2><hr>';
+                    for (const key in data) {
+                        if (data.hasOwnProperty(key)) {
+                            const section = document.createElement('div');
+                            section.className = 'data-section';
+                            
+                            const heading = document.createElement('h3');
+                            heading.textContent = key;
+                            section.appendChild(heading);
+                            
+                            const ul = document.createElement('ul');
+                            for (const subKey in data[key]) {
+                                if (data[key].hasOwnProperty(subKey)) {
+                                    const li = document.createElement('li');
+                                    li.textContent = `${subKey}: ${JSON.stringify(data[key][subKey])}`;
+                                    ul.appendChild(li);
+                                }
+                            }
+                            section.appendChild(ul);
+                            patientDataContainer.appendChild(section);
+                        }
+                    }
+                } else {
+                    console.warn(`[WARN] No data found at path: ${dataPath}`);
+                    patientDataContainer.innerHTML = '<h2>No Data Found</h2><p>Looks like there is no progress data recorded yet. Please start practicing or playing games!</p>';
+                }
+            } catch (error) {
+                console.error("[ERROR] Failed to fetch patient data:", error.message);
+                patientDataContainer.innerHTML = '<h2>Error</h2><p>Failed to retrieve data. Please try again later.</p>';
             }
-        });
-    } else {
-        // Clear data if no user is logged in
-        DOM.dashboard.username.textContent = 'N/A';
-        DOM.dashboard.email.textContent = 'N/A';
-        DOM.dashboard.designation.textContent = 'N/A';
-        DOM.dashboard.testData.textContent = 'Please log in to see data.';
-        console.log("User is not logged in. Patient data not displayed.");
-    }
+        } else {
+            console.warn("[WARN] No user is authenticated. Redirecting to home.");
+            patientDataContainer.innerHTML = '<h2>Unauthorized</h2><p>You must be logged in to view this page. Redirecting...</p>';
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 3000);
+        }
+    });
 };
-
-// ====================================================================
-// Event Listeners for Patient Module
-// ====================================================================
-
-// Listener for the back button
-DOM.buttons.dashboardBack.addEventListener('click', () => {
-    window.location.href = '../index.html';
-});
-
-// Use the Firebase auth state change observer to load data
-onAuthStateChanged(auth, (user) => {
-    getPatientData(user);
-});
-
-console.log("[LOG] Patient Dashboard script initialized.");
