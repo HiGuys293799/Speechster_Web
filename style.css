@@ -4,6 +4,56 @@
  */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
+/* Other styles remain unchanged from the previous version */
+
+/* Styles for the new auth forms */
+#auth-screen {
+    justify-content: center;
+    text-align: center;
+}
+
+#auth-forms-container {
+    width: 100%;
+    max-width: 350px;
+    margin-top: 20px;
+}
+
+#login-form, #register-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+#login-form input,
+#register-form input,
+#register-form select {
+    width: 90%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid var(--color-border-hr);
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--color-text);
+}
+
+#login-form input::placeholder,
+#register-form input::placeholder {
+    color: var(--color-text);
+    opacity: 0.7;
+}
+
+.auth-message {
+    min-height: 20px;
+    font-size: 0.9em;
+    color: #e67c7c; /* Red for errors */
+}
+
+/* New style for the logout button */
+.logout-btn {
+    margin-top: 20px;
+}
+
+
 /* Define CSS variables for theming */
 :root {
     /* Dark Mode Defaults */
@@ -39,7 +89,6 @@ body.light-mode {
     --color-text-feedback: #333;
     --color-back-btn: #333;
     --color-particle: rgb(0, 0, 0);
-    cursor: none;
 }
 
 body {
@@ -54,7 +103,6 @@ body {
     transition: background-color 0.5s ease;
     background-color: var(--color-background-body);
     color: var(--color-text);
-    cursor: none;
 }
 
 /* Particle Background Container */
@@ -116,7 +164,6 @@ body {
     transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     z-index: 1; /* Ensure the container is below the particles */
-    cursor: none;
     overflow-y: auto; /* Enables vertical scrolling when content overflows */
     padding: 20px;
     height: auto; /* Allow the height to adjust based on content */
@@ -171,7 +218,6 @@ body {
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.5s ease;
-    cursor: none;
 }
 
 .screen.active {
@@ -226,7 +272,7 @@ hr {
     color: inherit;
     font-size: 1em;
     font-weight: 500;
-    cursor: none;
+    cursor: pointer;
     margin: 8px;
     transition: all 0.2s ease;
     backdrop-filter: blur(8px);
@@ -259,7 +305,7 @@ hr {
     background: none;
     border: none;
     font-size: 2em;
-    cursor: none;
+    cursor: pointer;
     padding: 5px;
     color: var(--color-back-btn);
     opacity: 0.7;

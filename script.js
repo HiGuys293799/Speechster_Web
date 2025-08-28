@@ -1,26 +1,26 @@
 /*
  * Speechster 1000 - Main Application Logic
- * Version 2.0 - Fixed pathing for user folders
+ * Version 3.1 - Enhanced Login with Patient Redirection
  */
 
 // ====================================================================
 // Firebase SDK and Auth Imports
 // ====================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { 
-    getAuth, 
-    createUserWithEmailAndPassword, 
+import {
+    getAuth,
+    createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     onAuthStateChanged,
     updateProfile,
     signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { 
-    getDatabase, 
-    ref, 
+import {
+    getDatabase,
+    ref,
     onValue,
     set,
-    get 
+    get
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 console.log("[LOG] --- Speechester 1000 Booting Up ---");
@@ -39,145 +39,21 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getDatabase(app);
+const auth = getAuth(app);
+const db = getDatabase(app);
 
 // ====================================================================
 // Core Database Write Function
 // ====================================================================
-
-/**
- * @description A centralized function for writing data to the Firebase Realtime Database.
- * @param {string} fullPath - The complete path to the data location.
- * @param {object} dataToWrite - The content to write.
- */
 const writeToDB = async (fullPath, dataToWrite) => {
     try {
         await set(ref(db, fullPath), dataToWrite);
-        
         console.log(`[LOG] Successfully wrote data to path: ${fullPath}`);
     } catch (error) {
         console.error(`[ERROR] Failed to write data to database at path: ${fullPath}`, error.message);
         throw error;
     }
 };
-
-// ====================================================================
-// User Registration and Login
-// ====================================================================
-
-window.registerUser = async () => {
-    const email = prompt("Please enter your email:");
-    const password = prompt("Please enter your password:");
-    const username = prompt("Please enter your username:");
-    const designation = prompt("Are you a 'doctor' or a 'patient'?");
-
-    if (!email || !password || !username || (designation !== 'doctor' && designation !== 'patient')) {
-        console.error("Registration aborted. All fields are required and designation must be 'doctor' or 'patient'.");
-        return;
-    }
-
-    try {
-        console.log(`Attempting to register user: ${email}`);
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        await updateProfile(user, { displayName: username });
-        await writeToDB(`users/${designation}s/${user.uid}`, {
-            username: username,
-            email: email,
-            designation: designation
-        });
-        if (designation === 'patient') {
-            await writeToDB(`users/${designation}s/${user.uid}/data`, {
-                "Practice": { "placeholder": true },
-                "Games": {
-                    "Game1": { "placeholder": true },
-                    "Game2": { "placeholder": true }
-                },
-                "Settings": { "placeholder": true }
-            });
-        }
-        console.log("Registration successful!");
-    } catch (error) {
-        console.error("Error during registration:", error.message);
-    }
-};
-
-window.loginUser = async () => {
-    const email = prompt("Please enter your email:");
-    const password = prompt("Please enter your password:");
-
-    if (!email || !password) {
-        console.error("Login aborted. Both email and password are required.");
-        return;
-    }
-
-    try {
-        console.log(`Attempting to log in user: ${email}`);
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // Fetch user's designation to determine the correct path
-        const userRef = ref(db, `users/patients/${user.uid}`);
-        const userSnapshot = await get(userRef);
-        let userData = userSnapshot.val();
-
-        if (!userData) {
-            const doctorRef = ref(db, `users/doctors/${user.uid}`);
-            const doctorSnapshot = await get(doctorRef);
-            userData = doctorSnapshot.val();
-        }
-
-        if (!userData) {
-             throw new Error("User data not found in either patients or doctors collection.");
-        }
-
-        console.log("Login successful!");
-        console.log(`User Logged In:`);
-        console.log(`  - Username: ${userData.username}`);
-        console.log(`  - Email: ${userData.email}`);
-        console.log(`  - User UID: ${user.uid}`);
-        console.log(`  - Designation: ${userData.designation}`);
-
-        // Only create the data structure if the user is a patient AND the 'data' node doesn't exist
-        if (userData.designation === 'patient') {
-            const dataRef = ref(db, `users/patients/${user.uid}/data`);
-            const dataSnapshot = await get(dataRef);
-            if (!dataSnapshot.exists()) {
-                console.log("[LOG] Creating patient data structure...");
-                await writeToDB(`users/patients/${user.uid}/data`, {
-                    "Practice": { "placeholder": true },
-                    "Games": {
-                        "Game1": { "placeholder": true },
-                        "Game2": { "placeholder": true }
-                    },
-                    "Settings": { "placeholder": true }
-                });
-                console.log("[LOG] Patient data structure created successfully.");
-            } else {
-                console.log("[LOG] Patient data structure already exists.");
-            }
-            // Redirect patient to their specific dashboard
-            window.location.href = "patient/patient.html";
-        }
-        
-    } catch (error) {
-        console.error("Error during login:", error.message);
-    }
-};
-
-window.logoutUser = async () => {
-    try {
-        await signOut(auth);
-        console.log("User logged out successfully.");
-        // Redirect to the login page or main index.
-        window.location.href = "index.html"; 
-    } catch (error) {
-        console.error("Error during logout:", error.message);
-    }
-};
-
-
 
 // ====================================================================
 // Main Application Logic - Inside DOMContentLoaded
@@ -191,11 +67,20 @@ document.addEventListener('DOMContentLoaded', () => {
         body: document.body,
         particleContainer: document.getElementById('particle-container'),
         screens: {
+            auth: document.getElementById('auth-screen'),
             modeSelection: document.getElementById('mode-selection-screen'),
             practice: document.getElementById('practice-screen'),
             game1: document.getElementById('game-screen-1'),
             game2: document.getElementById('game-screen-2'),
             settings: document.getElementById('settings-screen')
+        },
+        forms: {
+            login: document.getElementById('login-form'),
+            register: document.getElementById('register-form')
+        },
+        messages: {
+            login: document.getElementById('login-message'),
+            register: document.getElementById('register-message')
         },
         buttons: {
             connect: document.getElementById('connect-button'),
@@ -233,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     let appState = {
-        activeScreenId: 'mode-selection-screen',
+        activeScreenId: 'auth-screen',
         practiceCount: 0,
         game1Score: 0,
         game2Score: 0,
@@ -242,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         game1ScoreInterval: null,
         game2WordInterval: null,
         screenHeights: {
+            'auth-screen': 500,
             'mode-selection-screen': 500,
             'practice-screen': 455,
             'game-screen-1': 550,
@@ -250,10 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         words: ["hello", "world", "apple", "banana", "cat", "dog"],
         particles: [],
-        mouse: {
-            x: window.innerWidth / 2,
-            y: window.innerHeight / 2,
-        },
+        mouse: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
         particleSettings: {
             count: 10,
             sizeRange: [10, 10],
@@ -265,6 +148,134 @@ document.addEventListener('DOMContentLoaded', () => {
         particleShapes: ['shape-circle']
     };
 
+    // New function to update the app's view based on authentication state
+    const updateView = async (user) => {
+        if (user) {
+            try {
+                // Fetch user's designation from the database
+                const usersRef = ref(db, `users`);
+                const snapshot = await get(usersRef);
+
+                if (snapshot.exists()) {
+                    let userDesignation = null;
+                    const usersData = snapshot.val();
+                    if (usersData.patients && usersData.patients[user.uid]) {
+                        userDesignation = 'patient';
+                    } else if (usersData.doctors && usersData.doctors[user.uid]) {
+                        userDesignation = 'doctor';
+                    }
+                    
+                    if (userDesignation === 'patient') {
+                        // Redirect to the patient dashboard
+                        window.location.href = 'patients/patient.html';
+                    } else {
+                        // User is a doctor or designation is unknown, show the main app interface
+                        showScreen('mode-selection-screen');
+                    }
+                } else {
+                    console.error("[ERROR] User data not found in database.");
+                    showScreen('mode-selection-screen');
+                }
+            } catch (error) {
+                console.error("[ERROR] Failed to fetch user designation:", error.message);
+                showScreen('mode-selection-screen');
+            }
+        } else {
+            // User is signed out, show the auth screen
+            showScreen('auth-screen');
+        }
+    };
+
+    // Firebase Authentication State Listener
+    onAuthStateChanged(auth, (user) => {
+        updateView(user);
+    });
+
+    // Handle Login Form Submission
+    if (DOM.forms.login) {
+        DOM.forms.login.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = DOM.forms.login.querySelector('#login-email').value;
+            const password = DOM.forms.login.querySelector('#login-password').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                console.log("Login successful!");
+                DOM.messages.login.textContent = ''; // Clear message on success
+                // Redirection will be handled by the onAuthStateChanged listener
+            } catch (error) {
+                console.error("Error during login:", error.message);
+                DOM.messages.login.textContent = error.message;
+            }
+        });
+    }
+
+    // Handle Registration Form Submission
+    if (DOM.forms.register) {
+        DOM.forms.register.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = DOM.forms.register.querySelector('#register-username').value;
+            const email = DOM.forms.register.querySelector('#register-email').value;
+            const password = DOM.forms.register.querySelector('#register-password').value;
+            const designation = DOM.forms.register.querySelector('#register-designation').value;
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                await updateProfile(user, { displayName: username });
+                await writeToDB(`users/${designation}s/${user.uid}`, {
+                    username: username,
+                    email: email,
+                    designation: designation
+                });
+                if (designation === 'patient') {
+                    await writeToDB(`users/${designation}s/${user.uid}/data`, {
+                        "Practice": { "placeholder": true },
+                        "Games": { "Game1": { "placeholder": true }, "Game2": { "placeholder": true } },
+                        "Settings": { "placeholder": true }
+                    });
+                }
+                console.log("Registration successful!");
+                DOM.messages.register.textContent = 'Registration successful! You can now log in.';
+                // Redirection will be handled by the onAuthStateChanged listener
+            } catch (error) {
+                console.error("Error during registration:", error.message);
+                DOM.messages.register.textContent = error.message;
+            }
+        });
+    }
+
+    // Function to handle logout
+    window.logoutUser = async () => {
+        try {
+            await signOut(auth);
+            console.log("User logged out successfully.");
+            // View will update automatically due to onAuthStateChanged
+        } catch (error) {
+            console.error("Error during logout:", error.message);
+        }
+    };
+
+    const showScreen = (newScreenId, isBack = false) => {
+        const currentScreen = document.getElementById(appState.activeScreenId);
+        const newScreen = document.getElementById(newScreenId);
+        if (!newScreen) return;
+        DOM.appContainer.style.height = `${appState.screenHeights[newScreenId]}px`;
+        if (currentScreen) {
+            currentScreen.classList.remove('active');
+            if (isBack) {
+                currentScreen.classList.add('slide-out-back');
+                newScreen.classList.add('slide-in-back');
+            } else {
+                currentScreen.classList.add('slide-out');
+                newScreen.classList.add('slide-in');
+            }
+        }
+        setTimeout(() => newScreen.classList.add('active'), 10);
+        currentScreen.addEventListener('animationend', () => currentScreen.classList.remove('slide-out', 'slide-out-back'), { once: true });
+        newScreen.addEventListener('animationend', () => newScreen.classList.remove('slide-in', 'slide-in-back'), { once: true });
+        appState.activeScreenId = newScreenId;
+    };
+    // The rest of the script.js file (game logic, particle effects, etc.) remains the same.
+    // ... (rest of the code from script.js) ...
     const formatTime = (totalSeconds) => {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
@@ -311,27 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (score >= 5) return "Very well done!";
         if (score >= 3) return "Not bad but you can improve!";
         return "Keep practicing!";
-    };
-
-    const showScreen = (newScreenId, isBack = false) => {
-        const currentScreen = document.getElementById(appState.activeScreenId);
-        const newScreen = document.getElementById(newScreenId);
-        if (!newScreen) return;
-        DOM.appContainer.style.height = `${appState.screenHeights[newScreenId]}px`;
-        if (currentScreen) {
-            currentScreen.classList.remove('active');
-            if (isBack) {
-                currentScreen.classList.add('slide-out-back');
-                newScreen.classList.add('slide-in-back');
-            } else {
-                currentScreen.classList.add('slide-out');
-                newScreen.classList.add('slide-in');
-            }
-        }
-        setTimeout(() => newScreen.classList.add('active'), 10);
-        currentScreen.addEventListener('animationend', () => currentScreen.classList.remove('slide-out', 'slide-out-back'), { once: true });
-        newScreen.addEventListener('animationend', () => newScreen.classList.remove('slide-in', 'slide-in-back'), { once: true });
-        appState.activeScreenId = newScreenId;
     };
 
     const startTimer = (duration, display, callback) => {
@@ -441,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if(DOM.appContainer) {
         DOM.appContainer.style.height = `${appState.screenHeights[appState.activeScreenId]}px`;
-        if(DOM.screens.modeSelection) DOM.screens.modeSelection.classList.add('active');
+        if(DOM.screens.auth) DOM.screens.auth.classList.add('active');
     }
 
     const bluetoothManager = new BluetoothManager({
@@ -561,16 +551,3 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchAndDisplayPatientData();
     }
 });
-
-const sendDataOnUnload = (url, data) => {
-    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-    if (navigator.sendBeacon) {
-        const success = navigator.sendBeacon(url, blob);
-        if (!success) console.warn("sendBeacon failed. Data may not have been sent.");
-    } else {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", url, false);
-        xhr.setRequestHeader("Content-Type", "application/json");
-        xhr.send(blob);
-    }
-};
