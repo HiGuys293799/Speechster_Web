@@ -1,37 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patient Dashboard - Speechster 1000</title>
-    <link rel="stylesheet" href="../style.css">
-    <link rel="stylesheet" href="patient.css">
-    
-    <script type="module" src="patient.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patient Dashboard - Speechster 1000</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="patient.css" />
+  <script type="module" src="patient.js"></script>
 </head>
 <body class="dark-mode">
+  <div id="particle-container"></div>
+  <div id="app-container" class="patient-dashboard">
+    <div id="patient-dashboard-screen" class="screen active">
+      <div id="fixed-header">
+        <h1>My Dashboard</h1>
+        <p>Welcome, patient! This is your personalized information page.</p>
+      </div>
 
-    <div id="particle-container"></div>
-
-    <div id="app-container" class="patient-dashboard">
-
-        <div id="patient-dashboard-screen" class="screen active">
-            <div id="fixed-header">
-                <h1>My Dashboard</h1>
-                <p>Welcome, patient! This is your personalized information page.</p>
-            </div>
-            
-            <div id="scrollable-content">
-                <div id="patient-info-container">
-                    <div class="content-spacer"></div>
-                </div>
-            </div>
-
+      <div id="scrollable-content">
+        <div id="patient-info-container">
+          <div class="content-spacer"></div>
         </div>
-        <div class="button-container">
-            <button onclick="window.logoutUser()" class="btn">Log Out</button>
-        </div>
+      </div>
     </div>
 
+    <div class="button-container">
+      <button id="logout-btn" class="btn">Log Out</button>
+    </div>
+  </div>
 </body>
 </html>
