@@ -7,9 +7,9 @@ import {
   signOut,
   onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { 
-  getDatabase, 
-  ref, 
+import {
+  getDatabase,
+  ref,
   set,
   get,
   update
@@ -69,7 +69,6 @@ const elements = {
   logoutBtn: document.getElementById('logout-btn'),
   practiceCount: document.getElementById('practice-count'),
   practiceFeedback: document.getElementById('practice-feedback'),
-  correctBtn: document.getElementById('correct-btn'),
   lightModeBtn: document.getElementById('light-mode-btn'),
   darkModeBtn: document.getElementById('dark-mode-btn')
 };
@@ -356,44 +355,7 @@ function selectPatient(patientId) {
   // You would typically navigate to a patient-specific screen or load their data here.
 }
 
-// Practice Mode Functions
-function setupPracticeMode() {
-  if (elements.correctBtn) {
-    elements.correctBtn.addEventListener('click', async () => {
-      AppState.practiceCount++;
-      if (elements.practiceCount) {
-        elements.practiceCount.textContent = AppState.practiceCount;
-      }
-      if (elements.practiceFeedback) {
-        elements.practiceFeedback.textContent = 'Correct! 🎉';
-        
-        // Flash green effect
-        document.body.style.backgroundColor = '#4CAF50';
-        setTimeout(() => {
-          document.body.style.backgroundColor = '';
-        }, 300);
-      }
-      
-      // Save practice data using the new function
-      if (AppState.isAuthenticated && AppState.user.designation === 'patient') {
-        const patientId = AppState.user.uid;
-        const now = new Date();
-        const dateKey = now.toISOString().split('T')[0]; // YYYY-MM-DD
-        const timeKey = now.toLocaleTimeString('en-GB').replace(/:/g, '-'); // HH-MM-SS
-        
-        const practicePath = `users/patients/${patientId}/data/Practice/practice-log-${dateKey}.json`;
-        
-        await window.firebaseModules.writeToDB(
-          practicePath,
-          {
-            count: AppState.practiceCount,
-            lastUpdated: now.toISOString()
-          }
-        );
-      }
-    });
-  }
-}
+
 
 // Theme Management
 function setupThemeSwitcher() {
@@ -442,6 +404,47 @@ function setupModeSelection() {
   if (settingsBtn) {
     settingsBtn.addEventListener('click', () => navigateToScreen('settings-screen'));
   }
+
+  // New Timer Logic for Games
+  const game1StartBtn = document.getElementById('ready-btn');
+  const game1TimerDisplay = document.getElementById('game-1-timer');
+  const game2StartBtn = document.getElementById('start-game-2');
+  const game2TimerDisplay = document.getElementById('game-2-timer');
+
+  if (game1StartBtn) {
+    game1StartBtn.addEventListener('click', () => {
+      // Game 1 Timer: 3 minutes (180 seconds)
+      startTimer(180, game1TimerDisplay);
+    });
+  }
+
+  if (game2StartBtn) {
+    game2StartBtn.addEventListener('click', () => {
+      // Game 2 Timer: 1 minute (60 seconds)
+      startTimer(60, game2TimerDisplay);
+    });
+  }
+}
+
+function startTimer(duration, display) {
+  let timer = duration;
+  let minutes, seconds;
+  const gameInterval = setInterval(() => {
+    minutes = parseInt(timer / 60, 10);
+    seconds = parseInt(timer % 60, 10);
+
+    minutes = minutes < 10 ? "0" + minutes : minutes;
+    seconds = seconds < 10 ? "0" + seconds : seconds;
+
+    display.textContent = minutes + ":" + seconds;
+    
+    if (--timer < 0) {
+      clearInterval(gameInterval);
+      display.textContent = "00:00";
+      console.log("Time's up!");
+      // Add any end-of-game logic here
+    }
+  }, 1000);
 }
 
 // Initialize the application
@@ -474,7 +477,6 @@ function initApp() {
   // Set up navigation
   setupBackButtons();
   setupModeSelection();
-  setupPracticeMode();
   setupThemeSwitcher();
   
   // Handle browser back/forward navigation
