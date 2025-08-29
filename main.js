@@ -11,7 +11,8 @@ import {
   getDatabase, 
   ref, 
   set,
-  get
+  get,
+  update
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 // Firebase configuration
@@ -38,10 +39,13 @@ window.firebaseModules = {
   ref, 
   set, 
   get, 
+  update, // Add update to firebaseModules
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  uploadFile,
+  retrieveFile
 };
 
 // Application State
@@ -49,7 +53,8 @@ const AppState = {
   currentScreen: 'auth-screen',
   practiceCount: 0,
   isAuthenticated: false,
-  user: null
+  user: null,
+  selectedPatientId: null // New state variable
 };
 
 // DOM Elements
@@ -107,6 +112,60 @@ function showMessage(element, message, isError = true) {
         element.textContent = '';
       }, 3000);
     }
+  }
+}
+
+// File Storage Functions
+/**
+ * Reads a file and returns its data as a Base64 string.
+ * @param {File} file The file to read.
+ * @returns {Promise<string>} A promise that resolves with the Base64 string.
+ */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+}
+
+/**
+ * Uploads a file as a Base64 string to the Realtime Database.
+ * @param {File} file The file to upload.
+ * @param {string} filePath The path where the Base64 data will be stored (e.g., 'audio/user-id/recording').
+ * @returns {Promise<void>}
+ */
+async function uploadFile(file, filePath) {
+  try {
+    const base64Data = await fileToBase64(file);
+    const fileRef = ref(window.firebaseDB, filePath);
+    await set(fileRef, base64Data);
+    console.log("File uploaded successfully to Realtime Database.");
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    throw error;
+  }
+}
+
+/**
+ * Retrieves a file's Base64 string from the Realtime Database.
+ * @param {string} filePath The path of the file to retrieve.
+ * @returns {Promise<string|null>} A promise that resolves with the Base64 string or null if not found.
+ */
+async function retrieveFile(filePath) {
+  try {
+    const fileRef = ref(window.firebaseDB, filePath);
+    const snapshot = await get(fileRef);
+    if (snapshot.exists()) {
+      return snapshot.val();
+    } else {
+      console.log("No data found at path:", filePath);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error retrieving file:", error);
+    throw error;
   }
 }
 
@@ -180,6 +239,47 @@ async function handleLogout() {
     console.error('Logout error:', error);
     alert('Logout failed. Please try again.');
   }
+}
+
+// Doctor-specific functions
+/**
+ * Assigns a patient to the currently logged-in doctor.
+ * @param {string} patientId The ID of the patient to assign.
+ */
+async function assignPatient(patientId) {
+  if (!AppState.user || AppState.user.designation !== 'doctor') {
+    console.error('Current user is not a doctor or not authenticated.');
+    return;
+  }
+
+  const doctorId = AppState.user.uid;
+  
+  try {
+    const { ref, update } = window.firebaseModules;
+    
+    // Prepare updates for both doctor and patient paths
+    const updates = {};
+    updates[`users/doctors/${doctorId}/assignedPatients/${patientId}`] = true;
+    updates[`users/patients/${patientId}/assignedTo`] = doctorId;
+    
+    // Apply the updates to the database
+    await update(ref(window.firebaseDB), updates);
+    console.log(`Patient ${patientId} successfully assigned to doctor ${doctorId}`);
+    
+  } catch (error) {
+    console.error('Error assigning patient:', error);
+    alert('Failed to assign patient. Please try again.');
+  }
+}
+
+/**
+ * Sets the selected patient in the application's state.
+ * @param {string} patientId The ID of the patient to select.
+ */
+function selectPatient(patientId) {
+  AppState.selectedPatientId = patientId;
+  console.log(`Selected patient set to: ${patientId}`);
+  // You would typically navigate to a patient-specific screen or load their data here.
 }
 
 // Practice Mode Functions
