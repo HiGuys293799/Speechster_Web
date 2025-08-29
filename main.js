@@ -39,13 +39,14 @@ window.firebaseModules = {
   ref, 
   set, 
   get, 
-  update, // Add update to firebaseModules
+  update,
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   uploadFile,
-  retrieveFile
+  retrieveFile,
+  writeToDB
 };
 
 // Application State
@@ -54,7 +55,7 @@ const AppState = {
   practiceCount: 0,
   isAuthenticated: false,
   user: null,
-  selectedPatientId: null // New state variable
+  selectedPatientId: null
 };
 
 // DOM Elements
@@ -139,8 +140,7 @@ function fileToBase64(file) {
 async function uploadFile(file, filePath) {
   try {
     const base64Data = await fileToBase64(file);
-    const fileRef = ref(window.firebaseDB, filePath);
-    await set(fileRef, base64Data);
+    await window.firebaseModules.writeToDB(filePath, base64Data);
     console.log("File uploaded successfully to Realtime Database.");
   } catch (error) {
     console.error("Error uploading file:", error);
@@ -169,6 +169,38 @@ async function retrieveFile(filePath) {
   }
 }
 
+// Data Writing Function
+/**
+ * Writes data to the database at a specified path. Can perform single-path sets or multi-path updates.
+ * @param {string} path The full database path (e.g., 'users/patients/patient123/data').
+ * @param {any} data The data to be written. Can be a value for a set or an object for a multi-path update.
+ */
+async function writeToDB(path, data) {
+  const { ref, set, update } = window.firebaseModules;
+  
+  if (typeof path !== 'string' || !path) {
+    console.error('Error: A valid path string is required for writing to the database.');
+    return;
+  }
+  
+  try {
+    const dataRef = ref(window.firebaseDB, path);
+    if (typeof data === 'object' && data !== null && !Array.isArray(data) && Object.keys(data).length > 1) {
+      // If the data object has multiple keys, treat it as a multi-path update
+      await update(dataRef, data);
+      console.log(`Data updated successfully at path: ${path}`);
+    } else {
+      // Otherwise, perform a simple set operation
+      await set(dataRef, data);
+      console.log(`Data set successfully at path: ${path}`);
+    }
+  } catch (error) {
+    console.error(`Error writing data to path '${path}':`, error);
+    throw error;
+  }
+}
+
+
 // Authentication Functions
 async function handleLogin(email, password) {
   try {
@@ -196,19 +228,28 @@ async function handleLogin(email, password) {
 
 async function handleRegistration(username, email, password, designation) {
   try {
-    const { createUserWithEmailAndPassword, ref, set } = window.firebaseModules;
+    const { createUserWithEmailAndPassword } = window.firebaseModules;
     const userCredential = await createUserWithEmailAndPassword(
       window.firebaseAuth, email, password
     );
     
-    // Save user data to the correct, designation-specific path
-    const userRef = ref(window.firebaseDB, `users/${designation}s/${userCredential.user.uid}`);
-    await set(userRef, {
+    // Save user data to the correct, designation-specific path using writeToDB
+    const userPath = `users/${designation}s/${userCredential.user.uid}`;
+    await window.firebaseModules.writeToDB(userPath, {
       username,
       email,
       designation,
       createdAt: Date.now()
     });
+    
+    // If the new user is a patient, create their base data folders
+    if (designation === 'patient') {
+      const patientDataPath = `users/patients/${userCredential.user.uid}/data`;
+      await window.firebaseModules.writeToDB(`${patientDataPath}/Games/Game1`, { 'placeholder': true });
+      await window.firebaseModules.writeToDB(`${patientDataPath}/Games/Game2`, { 'placeholder': true });
+      await window.firebaseModules.writeToDB(`${patientDataPath}/Practice`, { 'placeholder': true });
+      await window.firebaseModules.writeToDB(`${patientDataPath}/Settings`, { 'placeholder': true });
+    }
 
     showMessage(elements.registerMessage, 'Registration successful! Redirecting...', false);
     
@@ -255,15 +296,13 @@ async function assignPatient(patientId) {
   const doctorId = AppState.user.uid;
   
   try {
-    const { ref, update } = window.firebaseModules;
-    
     // Prepare updates for both doctor and patient paths
     const updates = {};
     updates[`users/doctors/${doctorId}/assignedPatients/${patientId}`] = true;
     updates[`users/patients/${patientId}/assignedTo`] = doctorId;
     
-    // Apply the updates to the database
-    await update(ref(window.firebaseDB), updates);
+    // Use the new writeToDB to perform the multi-path update
+    await window.firebaseModules.writeToDB('', updates);
     console.log(`Patient ${patientId} successfully assigned to doctor ${doctorId}`);
     
   } catch (error) {
@@ -285,7 +324,7 @@ function selectPatient(patientId) {
 // Practice Mode Functions
 function setupPracticeMode() {
   if (elements.correctBtn) {
-    elements.correctBtn.addEventListener('click', () => {
+    elements.correctBtn.addEventListener('click', async () => {
       AppState.practiceCount++;
       if (elements.practiceCount) {
         elements.practiceCount.textContent = AppState.practiceCount;
@@ -298,6 +337,24 @@ function setupPracticeMode() {
         setTimeout(() => {
           document.body.style.backgroundColor = '';
         }, 300);
+      }
+      
+      // Save practice data using the new function
+      if (AppState.isAuthenticated && AppState.user.designation === 'patient') {
+        const patientId = AppState.user.uid;
+        const now = new Date();
+        const dateKey = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        const timeKey = now.toLocaleTimeString('en-GB').replace(/:/g, '-'); // HH-MM-SS
+        
+        const practicePath = `users/patients/${patientId}/data/Practice/practice-log-${dateKey}.json`;
+        
+        await window.firebaseModules.writeToDB(
+          practicePath,
+          {
+            count: AppState.practiceCount,
+            lastUpdated: now.toISOString()
+          }
+        );
       }
     });
   }
@@ -403,9 +460,11 @@ function initApp() {
   
   onAuthStateChanged(window.firebaseAuth, async (user) => {
     if (user) {
+      // First, set the user object. We don't have the designation yet.
       AppState.isAuthenticated = true;
-      AppState.user = user;
-      
+      AppState.user = { uid: user.uid, email: user.email }; // Basic user info
+
+      // Now, get the designation from the database
       let userRef;
       let snapshot;
       let userData;
@@ -415,25 +474,33 @@ function initApp() {
       snapshot = await get(userRef);
       if (snapshot.exists()) {
         userData = snapshot.val();
-        if (userData.designation === 'patient') {
+        // Update AppState.user with the full data
+        AppState.user = { ...AppState.user, ...userData };
+        if (AppState.user.designation === 'patient') {
           window.location.href = 'patients/patient.html';
           return;
         }
       }
 
       // If not found in 'patients', try the 'doctors' path
-      userRef = ref(window.firebaseDB, `users/doctors/${user.uid}`);
-      snapshot = await get(userRef);
-      if (snapshot.exists()) {
-        userData = snapshot.val();
-        if (userData.designation === 'doctor') {
-          navigateToScreen('mode-selection-screen');
-          return;
+      if (!userData) {
+        userRef = ref(window.firebaseDB, `users/doctors/${user.uid}`);
+        snapshot = await get(userRef);
+        if (snapshot.exists()) {
+          userData = snapshot.val();
+          // Update AppState.user with the full data
+          AppState.user = { ...AppState.user, ...userData };
+          if (AppState.user.designation === 'doctor') {
+            navigateToScreen('mode-selection-screen');
+            return;
+          }
         }
       }
       
       // If user data is still not found, handle as a generic user
-      navigateToScreen('mode-selection-screen');
+      if (!userData) {
+        navigateToScreen('mode-selection-screen');
+      }
 
     } else {
       AppState.isAuthenticated = false;
