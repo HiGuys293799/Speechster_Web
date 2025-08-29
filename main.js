@@ -46,7 +46,8 @@ window.firebaseModules = {
   onAuthStateChanged,
   uploadFile,
   retrieveFile,
-  writeToDB
+  writeToDB,
+  writeToDbOLD,
 };
 
 // Application State
@@ -169,7 +170,41 @@ async function retrieveFile(filePath) {
   }
 }
 
-// Data Writing Function
+// Data Writing Functions
+
+/**
+ * Writes data to the database for a specific patient. Only callable by a doctor.
+ * @param {string} patientId The ID of the patient.
+ * @param {string} folderPath The path of the folder relative to the patient's data node.
+ * @param {boolean} isDirectory If true, creates a folder.
+ * @param {string} [fileName] The name of the file (required if isDirectory is false).
+ * @param {any} [fileContents] The contents to save (required if isDirectory is false).
+ */
+async function writeToDbOLD(patientId, folderPath, isDirectory, fileName, fileContents) {
+  // Wait for AppState.user to be populated before running this check
+  if (!AppState.user || AppState.user.designation !== 'doctor') {
+    console.error('Permission denied: Only doctors can write data to patient profiles.');
+    return;
+  }
+
+  const { ref, set } = window.firebaseModules;
+  const basePath = `users/patients/${patientId}/${folderPath}`;
+  
+  if (isDirectory) {
+    const folderRef = ref(window.firebaseDB, basePath);
+    await set(folderRef, { 'ignore': true });
+    console.log(`Folder created at: ${basePath}`);
+  } else {
+    if (!fileName || typeof fileContents === 'undefined') {
+      console.error('Error: fileName and fileContents are required for writing a file.');
+      return;
+    }
+    const fileRef = ref(window.firebaseDB, `${basePath}/${fileName}`);
+    await set(fileRef, fileContents);
+    console.log(`File '${fileName}' written to: ${basePath}`);
+  }
+}
+
 /**
  * Writes data to the database at a specified path. Can perform single-path sets or multi-path updates.
  * @param {string} path The full database path (e.g., 'users/patients/patient123/data').
