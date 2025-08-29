@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
             targetY: window.innerHeight / 2, // New target for snapping logic
         },
         particleSettings: {
-            count: 10,
+            count: 0,
             sizeRange: [10, 10],
             mouseAttraction: 0.03, // Controls the "pull" of particles towards the mouse
             mouseFollowDamping: 0.7, // Controls the "drag" or friction of the motion
