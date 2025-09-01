@@ -47,7 +47,7 @@ window.firebaseModules = {
   uploadFile,
   retrieveFile,
   writeToDB,
-  writeToDbOLD,
+  writeToDB_DEPRICATED,
 };
 
 // Application State
@@ -179,7 +179,7 @@ async function retrieveFile(filePath) {
  * @param {string} [fileName] The name of the file (required if isDirectory is false).
  * @param {any} [fileContents] The contents to save (required if isDirectory is false).
  */
-async function writeToDbOLD(patientId, folderPath, isDirectory, fileName, fileContents) {
+async function writeToDB_DEPRICATED(patientId, folderPath, isDirectory, fileName, fileContents) {
   // Wait for AppState.user to be populated before running this check
   if (!AppState.user || AppState.user.designation !== 'doctor') {
     console.error('Permission denied: Only doctors can write data to patient profiles.');
@@ -240,6 +240,7 @@ async function handleLogin(email, password) {
   try {
     const { signInWithEmailAndPassword } = window.firebaseModules;
     await signInWithEmailAndPassword(window.firebaseAuth, email, password);
+    console.log("Logged in as", email)
     return true;
   } catch (error) {
     console.error('Login error:', error);
@@ -264,7 +265,7 @@ async function handleRegistration(username, email, password, designation) {
   try {
     const { createUserWithEmailAndPassword } = window.firebaseModules;
     const userCredential = await createUserWithEmailAndPassword(
-      window.firebaseAuth, email, password
+      window.firebaseAuth, email, password,
     );
     
     // Save user data to the correct, designation-specific path using writeToDB
@@ -284,10 +285,13 @@ async function handleRegistration(username, email, password, designation) {
       await window.firebaseModules.writeToDB(`${patientDataPath}/Practice`, { 'placeholder': true });
       await window.firebaseModules.writeToDB(`${patientDataPath}/Settings`, { 'placeholder': true });
     }
-
+    
+    handleLogin(email, password),
     showMessage(elements.registerMessage, 'Registration successful! Redirecting...', false);
     
+
     return true;
+
   } catch (error) {
     console.error('Registration error:', error);
     

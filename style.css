@@ -62,14 +62,15 @@
       overflow: hidden;
       z-index: 1;
       overflow-y: auto;
-      padding: 20px;
-      height: auto;
+      padding-top: 20px;
+      padding-bottom: 20px;
+      height: fit-content;
       max-height: 90vh;
       -ms-overflow-style: none;
       scrollbar-width: none;
       display: flex;
       flex-direction: column;
-      flex-grow: 1;
+      /* flex-grow: 1; */
       margin: auto; /* This can be removed, as justify-content handles it */
     }
 
