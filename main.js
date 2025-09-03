@@ -1,5 +1,7 @@
 // Import Firebase modules
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
 import { 
   getAuth, 
   createUserWithEmailAndPassword, 
@@ -19,11 +21,12 @@ import {
 const firebaseConfig = {
   apiKey: "AIzaSyC4o7uIHSqRChe0k5LZOfnFDCr-vBWoqvY",
   authDomain: "speechster-1000.firebaseapp.com",
+  databaseURL: "https://speechster-1000-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "speechster-1000",
-  storageBucket: "speechster-1000.appspot.com",
+  storageBucket: "speechster-1000.firebasestorage.app",
   messagingSenderId: "543492593404",
   appId: "1:543492593404:web:df0f06a3db1af716626979",
-  databaseURL: "https://speechster-1000-default-rtdb.europe-west1.firebasedatabase.app"
+  measurementId: "G-RM7GFYFZB9"
 };
 
 // Initialize Firebase
@@ -48,6 +51,8 @@ window.firebaseModules = {
   retrieveFile,
   writeToDB,
   writeToDB_DEPRICATED,
+  handleLogout,
+  selectPatient,
 };
 
 // Application State
@@ -56,8 +61,10 @@ const AppState = {
   practiceCount: 0,
   isAuthenticated: false,
   user: null,
-  selectedPatientId: null
+  selectedPatientId: null,
+  debugMode: false
 };
+
 
 // DOM Elements
 const elements = {
@@ -70,25 +77,40 @@ const elements = {
   practiceCount: document.getElementById('practice-count'),
   practiceFeedback: document.getElementById('practice-feedback'),
   lightModeBtn: document.getElementById('light-mode-btn'),
-  darkModeBtn: document.getElementById('dark-mode-btn')
+  darkModeBtn: document.getElementById('dark-mode-btn'),
+  practiceScreen: document.getElementById('practice-screen'),
+  game1Screen: document.getElementById('game-screen-1'),
+  game2Screen: document.getElementById('game-screen-2'),
 };
 
 // Navigation Functions
+// main.js
+
+// In main.js, inside the navigateToScreen function
 function navigateToScreen(screenId) {
-  // Hide all screens
+  const appContainer = document.getElementById('app-container');
+  const targetScreen = document.getElementById(screenId);
+  
+  // Hide all screens first
   elements.screens.forEach(screen => {
     screen.classList.remove('active');
   });
-  
-  // Show the requested screen
-  const targetScreen = document.getElementById(screenId);
-  if (targetScreen) {
-    targetScreen.classList.add('active');
-    AppState.currentScreen = screenId;
-    
-    // Update browser history
-    window.history.pushState({ screen: screenId }, '', `#${screenId}`);
-  }
+
+  // Wait for the DOM to update with the new screen's content
+  requestAnimationFrame(() => {
+    // Show the requested screen
+    if (targetScreen) {
+      targetScreen.classList.add('active');
+      AppState.currentScreen = screenId;
+      
+      // Calculate and set the new height for the app container
+      const contentHeight = targetScreen.scrollHeight + 40; // Add padding
+      appContainer.style.height = `${contentHeight}px`;
+      
+      // Update browser history
+      // window.history.pushState({ screen: screenId }, '', `#${screenId}`);
+    }
+  });
 }
 
 // Back button handlers
@@ -450,6 +472,86 @@ function startTimer(duration, display) {
     }
   }, 1000);
 }
+
+// Debug Mode
+
+function createDebugButton(text) {
+  const button = document.createElement('button');
+  button.textContent = text;
+  button.classList.add('btn', 'debug-btn');
+  return button;
+}
+
+window.enableDebugMode = function() {
+  if (AppState.debugMode) {
+    console.log("Debug mode is already enabled.");
+    return;
+  }
+  AppState.debugMode = true;
+  console.log("Debug mode enabled. 'Increase Score' buttons should appear on Practice, Game 1, and Game 2 screens.");
+
+  const practiceScoreDisplay = document.getElementById('practice-count');
+  const game1ScoreDisplay = document.getElementById('game-1-score');
+  const game2ScoreDisplay = document.getElementById('game-2-score');
+
+  // Add "Increase Score" button to Practice Mode
+  const practiceDebugBtn = createDebugButton("Increase Score");
+  elements.practiceScreen.querySelector('.button-container').appendChild(practiceDebugBtn);
+  practiceDebugBtn.addEventListener('click', async () => {
+    // Assuming a current session ID is available
+    const sessionId = 'session-xxxx'; // Replace with dynamic session ID
+    if (AppState.selectedPatientId && sessionId) {
+      const scoreRef = ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/practice/sessions/${sessionId}/correctAttemps`);
+      const snapshot = await get(scoreRef);
+      if (snapshot.exists()) {
+        const currentScore = snapshot.val();
+        await update(ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/practice/sessions/${sessionId}`), {
+          correctAttemps: currentScore + 10
+        });
+        practiceScoreDisplay.textContent = (parseInt(practiceScoreDisplay.textContent, 10) || 0) + 10;
+        console.log(`Score increased for Practice Mode. New score: ${parseInt(practiceScoreDisplay.textContent, 10)}`);
+      }
+    }
+  })};
+
+    // Add "Increase Score" button to Game 1
+  const game1DebugBtn = createDebugButton("Increase Score");
+  elements.game1Screen.querySelector('.button-container').appendChild(game1DebugBtn);
+  game1DebugBtn.addEventListener('click', async () => {
+    const sessionId = 'session-xxxx'; // Replace with dynamic session ID
+    if (AppState.selectedPatientId && sessionId) {
+      const scoreRef = ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/games/game1/sessions/${sessionId}/finalScore`);
+      const snapshot = await get(scoreRef);
+      if (snapshot.exists()) {
+        const currentScore = snapshot.val();
+        await update(ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/games/game1/sessions/${sessionId}`), {
+          finalScore: currentScore + 10
+        });
+        game1ScoreDisplay.textContent = (parseInt(game1ScoreDisplay.textContent, 10) || 0) + 10;
+        console.log(`Score increased for Game 1. New score: ${parseInt(game1ScoreDisplay.textContent, 10)}`);
+      }
+    }
+  });
+
+  // Add "Increase Score" button to Game 2
+  const game2DebugBtn = createDebugButton("Increase Score");
+  elements.game2Screen.querySelector('.button-container').appendChild(game2DebugBtn);
+  game2DebugBtn.addEventListener('click', async () => {
+    const sessionId = 'session-xxx'; // Replace with dynamic session ID
+    if (AppState.selectedPatientId && sessionId) {
+      const scoreRef = ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/games/game2/sessions/${sessionId}/finalScore`);
+      const snapshot = await get(scoreRef);
+      if (snapshot.exists()) {
+        const currentScore = snapshot.val();
+        await update(ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/games/game2/sessions/${sessionId}`), {
+          finalScore: currentScore + 10
+        });
+        game2ScoreDisplay.textContent = (parseInt(game2ScoreDisplay.textContent, 10) || 0) + 10;
+        console.log(`Score increased for Game 2. New score: ${parseInt(game2ScoreDisplay.textContent, 10)}`);
+      }
+    }
+  });
+
 
 // Initialize the application
 function initApp() {

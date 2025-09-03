@@ -14,7 +14,7 @@
 
   <div id="app-container">
     <!-- Auth Screen -->
-    <div id="auth-screen" id="fixed-header" class="screen active">
+    <div id="auth-screen" class="screen active">
       <h1>Welcome to Speechster 1000</h1>
       <p>Please log in or register to continue.</p>
       <div id="auth-forms-container">
@@ -67,27 +67,32 @@
     </div>
 
     <!-- Practice -->
-    <div id="practice-screen" class="screen">
+<div id="practice-screen" class="screen">
       <button id="practice-back" class="back-btn">&#8592;</button>
       <h1>Practice Mode</h1>
-      <p>The screen will flash green when you successfully make the sound told by your therapist.</p>
+      <p>Successfully make the sound told by your therapist.</p>
       <span class="score-display" id="practice-count">0</span>
       <p id="practice-feedback" class="feedback-message"></p>
+      <div class="button-container">
+        <button id="start-practice-btn" class="btn">Start!</button>
+      </div>
     </div>
 
     <!-- Game 1 -->
-    <div id="game-screen-1" class="screen">
+<div id="game-screen-1" class="screen">
       <button id="game-1-back" class="back-btn">&#8592;</button>
       <h1>Game 1: Tongue Sensor</h1>
       <p>Click "Start!" to start the 3-minute timer. The score will increase every time you touch the top part of your mouth.</p>
       <span class="timer" id="game-1-timer">03:00</span>
       <span class="score-display" id="game-1-score">0</span>
       <p id="game-1-feedback" class="feedback-message"></p>
-      <button id="ready-btn" class="btn">Start!</button>
+      <div class="button-container">
+        <button id="ready-btn" class="btn">Start!</button>
+      </div>
     </div>
 
     <!-- Game 2 -->
-    <div id="game-screen-2" class="screen">
+<div id="game-screen-2" class="screen">
       <button id="game-2-back" class="back-btn">&#8592;</button>
       <h1>Game 2: Word Recognition</h1>
       <p>Click "Start!" to begin the 1-minute timer. The word will change every time you successfully say the word specified.</p>
@@ -95,7 +100,9 @@
       <h2 id="current-word">hello</h2>
       <span class="score-display" id="game-2-score">0</span>
       <p id="game-2-feedback" class="feedback-message"></p>
-      <button id="start-game-2" class="btn">Start!</button>
+      <div class="button-container">
+        <button id="start-game-2" class="btn">Start!</button>
+      </div>
     </div>
 
     <!-- Settings -->
@@ -113,7 +120,33 @@
 
   <!-- Firebase Modules -->
   <script type="module">
-   
+   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getDatabase, ref, set, push, onValue, serverTimestamp } 
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC4o7uIHSqRChe0k5LZOfnFDCr-vBWoqvY",
+      authDomain: "speechster-1000.firebaseapp.com",
+      databaseURL: "https://speechster-1000-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "speechster-1000",
+      storageBucket: "speechster-1000.firebasestorage.app",
+      messagingSenderId: "543492593404",
+      appId: "1:543492593404:web:df0f06a3db1af716626979",
+      measurementId: "G-RM7GFYFZB9"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // Make auth/db accessible to main.js
+    window.firebaseApp = app;
+    window.firebaseAuth = auth;
+    window.firebaseDb = db;
+
   </script>
 </body>
 </html>
