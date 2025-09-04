@@ -1,3 +1,21 @@
+// Toast sound offsets (ms). Positive = play before toast, Negative = delay after toast
+const TOAST_SOUND_LEADINS = {
+  success: 1000,  // 1s before toast
+  error:   2000,   // 0.5s before toast
+  warning: 100,   // 0.7s before toast
+  info:    300    // 0.3s before toast
+};
+
+// Toast sound sources (host locally in /sounds/toasts/)
+const TOAST_SOUNDS = {
+  success: "/sounds/toasts/success.mp3",   // DOORS achievement
+  error:   "/sounds/toasts/error.mp3",     
+  warning: "/sounds/toasts/warning.mp3",   
+  info:    "/sounds/toasts/info.mp3"       // badge/info sound
+};
+
+
+
 // Import Firebase modules
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -53,6 +71,8 @@ window.firebaseModules = {
   writeToDB_DEPRICATED,
   handleLogout,
   selectPatient,
+  unassignPatient,
+  addEvaluation,
 };
 
 // Application State
@@ -342,44 +362,44 @@ async function handleLogout() {
   }
 }
 
-// Doctor-specific functions
+
 /**
- * Assigns a patient to the currently logged-in doctor.
- * @param {string} patientId The ID of the patient to assign.
+ * Saves an evaluation session for the selected patient.
+ * @param {string} sessionId A unique ID for this session (e.g., 'session1').
+ * @param {number} score The evaluation score.
+ * @param {string} extraInfo Additional notes from the doctor.
  */
-async function assignPatient(patientId) {
+async function addEvaluation(sessionId, score, extraInfo) {
   if (!AppState.user || AppState.user.designation !== 'doctor') {
     console.error('Current user is not a doctor or not authenticated.');
     return;
   }
 
+  if (!AppState.selectedPatientId) {
+    console.error('No patient selected. Use selectPatient(patientId) first.');
+    return;
+  }
+
   const doctorId = AppState.user.uid;
-  
+  const patientId = AppState.selectedPatientId;
+
   try {
-    // Prepare updates for both doctor and patient paths
-    const updates = {};
-    updates[`users/doctors/${doctorId}/assignedPatients/${patientId}`] = true;
-    updates[`users/patients/${patientId}/assignedTo`] = doctorId;
-    
-    // Use the new writeToDB to perform the multi-path update
-    await window.firebaseModules.writeToDB('', updates);
-    console.log(`Patient ${patientId} successfully assigned to doctor ${doctorId}`);
-    
+    const path = `patientData/${patientId}/sessions/${sessionId}`;
+    const sessionData = {
+      score,
+      extraInfo,
+      by: doctorId,
+      timestamp: serverTimestamp()
+    };
+
+    await window.firebaseModules.writeToDB(path, sessionData);
+    console.log(`Evaluation saved for patient ${patientId}, session ${sessionId}`);
   } catch (error) {
-    console.error('Error assigning patient:', error);
-    alert('Failed to assign patient. Please try again.');
+    console.error('Error saving evaluation:', error);
+    alert('Failed to save evaluation. Please try again.');
   }
 }
 
-/**
- * Sets the selected patient in the application's state.
- * @param {string} patientId The ID of the patient to select.
- */
-function selectPatient(patientId) {
-  AppState.selectedPatientId = patientId;
-  console.log(`Selected patient set to: ${patientId}`);
-  // You would typically navigate to a patient-specific screen or load their data here.
-}
 
 
 
@@ -654,6 +674,170 @@ function initApp() {
     }
   });
 }
+
+// ---------------------------
+// Toast Notification System
+// ---------------------------
+let audioCtx;
+
+function ensureAudioUnlocked() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  if (audioCtx.state === "suspended") {
+    const unlock = () => {
+      audioCtx.resume().then(() => {
+        console.log("🔊 AudioContext unlocked");
+        document.removeEventListener("click", unlock);
+        document.removeEventListener("keydown", unlock);
+        document.removeEventListener("touchstart", unlock);
+      });
+    };
+    document.addEventListener("click", unlock);
+    document.addEventListener("keydown", unlock);
+    document.addEventListener("touchstart", unlock);
+  }
+}
+
+function playToastSound(type) {
+  ensureAudioUnlocked();
+  const soundSrc = TOAST_SOUNDS[type];
+  if (!soundSrc) return;
+
+  const audio = new Audio(soundSrc);
+  audio.volume = 0.6;
+  audio.play().catch(err => console.warn("Audio play blocked:", err));
+}
+
+
+function showToast(type, message) {
+  const container = document.getElementById("toast-container");
+
+  // Create toast element (but don’t attach yet!)
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+
+  let icon = "ℹ️";
+  if (type === "success") icon = "✅";
+  if (type === "error")   icon = "❌";
+  if (type === "warning") icon = "⚠️";
+
+  toast.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div>
+      <div class="toast-header">${type.toUpperCase()}</div>
+      <div class="toast-body">${message}</div>
+    </div>
+  `;
+
+  const leadIn = TOAST_SOUND_LEADINS[type] ?? 0;
+
+  if (leadIn < 0) {
+    // 🔊 Play sound *before* toast
+    playToastSound(type);
+    setTimeout(() => container.appendChild(toast), Math.abs(leadIn));
+  } else {
+    // ⏱️ Delay toast until after sound
+    setTimeout(() => {
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 5500);
+    }, leadIn);
+    playToastSound(type);
+  }
+}
+
+// ---------------------------
+// Doctor High-Level Commands
+// ---------------------------
+async function assignPatient(patientId) {
+  if (!AppState.user || AppState.user.designation !== 'doctor') {
+    showToast("❌ Only doctors can assign patients.", "error");
+    return { success: false, message: 'Not authorized' };
+  }
+  try {
+    const doctorId = AppState.user.uid;
+    const updates = {};
+    updates[`users/doctors/${doctorId}/assignedPatients/${patientId}`] = true;
+    updates[`users/patients/${patientId}/assignedTo`] = doctorId;
+    await writeToDB('/', updates);
+    showToast(`success`, "Patient ${patientId} assigned");
+    return { success: true, doctorId, patientId };
+  } catch (err) {
+    console.error(err);
+    showToast("error", "Failed To Assign Patient (check Console Logs!)");
+    return { success: false, message: err.message };
+  }
+}
+
+async function unassignPatient(patientId) {
+  if (!AppState.user || AppState.user.designation !== 'doctor') {
+    showToast("❌ Only doctors can unassign patients.", "error");
+    return { success: false, message: 'Not authorized' };
+  }
+  try {
+    const doctorId = AppState.user.uid;
+    const updates = {};
+    updates[`users/doctors/${doctorId}/assignedPatients/${patientId}`] = null;
+    updates[`users/patients/${patientId}/assignedTo`] = null;
+    await writeToDB('/', updates);
+    showToast(`✅ Patient ${patientId} unassigned.`, "success");
+    return { success: true, doctorId, patientId };
+  } catch (err) {
+    console.error(err);
+    showToast("❌ Failed to unassign patient.", "error");
+    return { success: false, message: err.message };
+  }
+}
+
+function selectPatient(patientId) {
+  AppState.selectedPatientId = patientId;
+  showToast(`📌 Selected patient: ${patientId}`, "info");
+  return { success: true, patientId };
+}
+
+async function saveDataCommand(score, extraInfo = "") {
+  if (!AppState.user || AppState.user.designation !== 'doctor') {
+    showToast("❌ Only doctors can save data.", "error");
+    return { success: false, message: 'Not authorized' };
+  }
+  if (!AppState.selectedPatientId) {
+    showToast("❌ No patient selected.", "error");
+    return { success: false, message: 'No patient selected' };
+  }
+  try {
+    const doctorId = AppState.user.uid;
+    const patientId = AppState.selectedPatientId;
+    const sessionId = `session-${Date.now()}`;
+    const path = `patientData/${patientId}/sessions/${sessionId}`;
+    const payload = {
+      score,
+      extraInfo,
+      by: doctorId,
+      timestamp: serverTimestamp()
+    };
+    await writeToDB(path, payload);
+    showToast(`✅ Data saved for ${patientId} (session ${sessionId})`, "success");
+    return { success: true, patientId, sessionId, data: payload };
+  } catch (err) {
+    console.error(err);
+    showToast("❌ Failed to save data.", "error");
+    return { success: false, message: err.message };
+  }
+}
+
+// ---------------------------
+// Add commands to global scope
+// ---------------------------
+Object.assign(window.firebaseModules, {
+  assignPatient,
+  unassignPatient,
+  selectPatient,
+  saveDataCommand,
+  showToast,
+});
+
+
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', initApp);

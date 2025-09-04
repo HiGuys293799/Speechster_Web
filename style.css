@@ -1,59 +1,64 @@
- /* Combined CSS from both style.css and patient.css with width adjustments */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+/* style.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     
-    :root {
-      /* Dark Mode Defaults */
-      --color-text: #f0f0f0;
-      --color-background-body: #141414;
-      --color-background-app: rgba(51, 51, 51, 0.411);
-      --color-border-app: rgba(255, 255, 255, 0.03); 
-      --color-shadow-app: rgba(0, 0, 0, 0.2);
-      --color-button-background: rgba(255, 255, 255, 0.02);
-      --color-button-border: rgba(255, 255, 255, 0.08);
-      --color-button-background-hover: rgba(255, 255, 255, 0.05);
-      --color-border-hr: rgba(255, 255, 255, 0.15);
-      --color-text-feedback: #fff;
-      --color-back-btn: #fff;
-      --color-particle: rgb(255, 255, 255);
-    }
+:root {
+  /* Dark Mode Defaults */
+  --color-text: #f0f0f0;
+  --color-background-body: #141414;
+  --color-background-app: rgba(255, 255, 255, 0.15);
+  --color-border-app: rgba(255, 255, 255, 0.25);
+  --color-shadow-app: rgba(0,0,0,0.25);
+  --color-button-background: rgba(255, 255, 255, 0.02);
+  --color-button-border: rgba(255, 255, 255, 0.08);
+  --color-button-background-hover: rgba(255, 255, 255, 0.05);
+  --color-border-hr: rgba(255, 255, 255, 0.15);
+  --color-text-feedback: #fff;
+  --color-back-btn: #fff;
+  --color-particle: rgb(255, 255, 255);
+}
 
     /* Light Mode Overrides */
-    body.light-mode {
-      --color-text: #333;
-      --color-background-body: #c5c5c5;
-      --color-background-app: rgba(236, 236, 236, 0.3);
-      --color-border-app: rgba(0, 0, 0, 0.03);
-      --color-shadow-app: rgba(0, 0, 0, 0.08);
-      --color-button-background: rgba(0, 0, 0, 0.02);
-      --color-button-border: rgba(0, 0, 0, 0.08);
-      --color-button-background-hover: rgba(0, 0, 0, 0.05);
-      --color-border-hr: rgba(0, 0, 0, 0.1);
-      --color-text-feedback: #333;
-      --color-back-btn: #333;
-      --color-particle: rgb(0, 0, 0);
-    }
+body.light-mode {
+  --color-text: #333;
+   --color-background-body: #c5c5c5;
+  --color-background-app: rgba(236, 236, 236, 0.3);
+  --color-border-app: rgba(0, 0, 0, 0.03);
+  --color-shadow-app: rgba(0, 0, 0, 0.08);
+  --color-button-background: rgba(0, 0, 0, 0.02);
+  --color-button-border: rgba(0, 0, 0, 0.08);
+  --color-button-background-hover: rgba(0, 0, 0, 0.05);
+  --color-border-hr: rgba(0, 0, 0, 0.1);
+  --color-text-feedback: #333;
+  --color-back-btn: #333;
+  --color-particle: rgb(0, 0, 0);
+}
 
- html, body {
-      min-height: 100vh;
+body {
       margin: 0;
-      padding: 0;
+      min-height: 100vh;
       display: flex;
-      flex-direction: column;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      justify-content: center;
       align-items: center;
-      justify-content: center; /* RE-ADDED: To center the app container vertically */
-      position: relative;
-      transition: background-color 0.5s ease;
-      background-color: var(--color-background-body);
+      background: linear-gradient(135deg, #000000 0%, #698a8a 100%);
+      background-size: 200% 200%;
+      animation: bgShift 15s ease infinite;
       color: var(--color-text);
-      overflow: hidden;
-    }
+      transition: background-color 0.5s ease;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+@keyframes bgShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 
     #app-container {
       background: var(--color-background-app);
       border: 1px solid var(--color-border-app);
       border-radius: 20px;
-      box-shadow: 0 10px 30px var(--color-shadow-app);
+      box-shadow: 0 8px 30px var(--color-shadow-app);
       text-align: center;
       width: 95%;
       max-width: 500px;
@@ -61,34 +66,39 @@
       position: relative;
       overflow: hidden;
       z-index: 1;
-      overflow-y: auto;
-      /* height: fit-content; */
-      /* max-height: 90vh; */
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-      display: flex;
-      flex-direction: column;
-      /* flex-grow: 1; */
-
+      max-height: 100vh;   /* prevents it from overflowing the screen */
+      overflow-y: auto;    /* adds vertical scrollbar if content is too tall */
+      width: 360px;
+      padding: 20px;
+      border-radius: 16px;
+      backdrop-filter: blur(30px) saturate(160%);
+     -webkit-backdrop-filter: blur(30px) saturate(160%);
       transition: height 0.5s cubic-bezier(0.17, 0.88, 0.49, 1.25), background-color 0.5s ease;
-
     }
 
+    
+    #app-container::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    #app-container::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.2);
+      border-radius: 4px;
+    }
+
+    #app-container::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,0,0,0.3);
+    }
 
   .screen {
-    /* Keep this from before */
     display: flex;
     flex-direction: column;
-
-    /* Add these lines to make the screen invisible and non-interactive */
     opacity: 0;
     pointer-events: none;
     position: absolute; /* This is key to prevent it from taking up space */
     top: 0;
     left: 0;
     width: 100%;
-
-    /* Add a transition for opacity to make it fade in and out */
     transition: opacity 0.5s ease;
   }
 
@@ -290,7 +300,8 @@
       cursor: pointer;
       margin: 10px;
       transition: all 0.2s ease;
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
       min-width: 140px;
     }
 
@@ -298,6 +309,8 @@
       background: var(--color-button-background-hover);
       box-shadow: 0 0 12px var(--color-shadow-app);
       transform: translateY(-2px);
+      backdrop-filter: blur(50px) saturate(180%);
+      -webkit-backdrop-filter: blur(50px) saturate(180%);
     }
 
     .score-display, .timer {
@@ -421,3 +434,106 @@
         font-size: 1.2em;
       }
     }
+
+
+/* Toast container stays top-right */
+#toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 2000;
+}
+
+/* Base toast (long banner style) */
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 380px;
+  padding: 18px 22px;
+  border-radius: 14px;
+  font-size: 1em;
+  color: #fff;
+  backdrop-filter: blur(8px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(120%);
+  animation: toastIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards,
+             toastOut 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards 4.8s;
+}
+
+/* Subtle glass shine */
+.toast::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255,255,255,0.15), transparent 70%);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+/* Category label (above message) */
+.toast-header {
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  text-shadow: 0 0 10px rgba(255,255,255,0.6);
+}
+
+/* Glow per type */
+.toast-success .toast-header {
+  color: #5dff92;
+  text-shadow: 0 0 12px rgba(93, 255, 146, 0.8), 0 0 20px rgba(93, 255, 146, 0.6);
+}
+.toast-error .toast-header {
+  color: #ff7070;
+  text-shadow: 0 0 12px rgba(255, 112, 112, 0.8), 0 0 20px rgba(255, 112, 112, 0.6);
+}
+.toast-warning .toast-header {
+  color: #ffd86b;
+  text-shadow: 0 0 12px rgba(255, 216, 107, 0.8), 0 0 20px rgba(255, 216, 107, 0.6);
+}
+.toast-info .toast-header {
+  color: #6bbcff;
+  text-shadow: 0 0 12px rgba(107, 188, 255, 0.8), 0 0 20px rgba(107, 188, 255, 0.6);
+}
+
+/* Toast message text */
+.toast-body {
+  font-size: 1em;
+  line-height: 1.4;
+}
+
+/* Toast icon */
+.toast-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 22px;
+  box-shadow: 0 0 12px rgba(255,255,255,0.3);
+}
+
+/* Animations */
+@keyframes toastIn {
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes toastOut {
+  to { opacity: 0; transform: translateX(120%); }
+}
+
