@@ -1,6 +1,6 @@
 // Toast sound offsets (ms). Positive = play before toast, Negative = delay after toast
 const TOAST_SOUND_LEADINS = {
-  success: 1000,  // 1s before toast
+  success: 1100,  // 1s before toast
   error:   2000,   // 0.5s before toast
   warning: 100,   // 0.7s before toast
   info:    300    // 0.3s before toast
