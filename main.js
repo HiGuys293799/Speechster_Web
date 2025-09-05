@@ -1,7 +1,7 @@
 // Toast sound offsets (ms). Positive = play before toast, Negative = delay after toast
 const TOAST_SOUND_LEADINS = {
-  success: 1100,  // 1s before toast
-  error:   2000,   // 0.5s before toast
+  success: 930,  // 1s before toast
+  error:   1500,   // 0.5s before toast
   warning: 100,   // 0.7s before toast
   info:    300    // 0.3s before toast
 };
@@ -14,6 +14,20 @@ const TOAST_SOUNDS = {
   info:    "/sounds/toasts/info.mp3"       // badge/info sound
 };
 
+let audioCtx;
+function initAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+}
+
+// Unlock audio on first interaction
+["click", "touchstart", "keydown"].forEach(evt => {
+  window.addEventListener(evt, initAudioContext, { once: true });
+});
 
 
 // Import Firebase modules
@@ -102,6 +116,7 @@ const elements = {
   game1Screen: document.getElementById('game-screen-1'),
   game2Screen: document.getElementById('game-screen-2'),
 };
+const backgroundAudio = document.getElementById('background-audio');
 
 // Navigation Functions
 // main.js
@@ -678,7 +693,6 @@ function initApp() {
 // ---------------------------
 // Toast Notification System
 // ---------------------------
-let audioCtx;
 
 function ensureAudioUnlocked() {
   if (!audioCtx) {
@@ -701,13 +715,24 @@ function ensureAudioUnlocked() {
 }
 
 function playToastSound(type) {
-  ensureAudioUnlocked();
-  const soundSrc = TOAST_SOUNDS[type];
-  if (!soundSrc) return;
+  const url = TOAST_SOUNDS[type];
+  if (!url) return;
 
-  const audio = new Audio(soundSrc);
-  audio.volume = 0.6;
-  audio.play().catch(err => console.warn("Audio play blocked:", err));
+  if (!audioCtx) {
+    // fallback for browsers that don’t need unlock
+    new Audio(url).play();
+    return;
+  }
+
+  fetch(url)
+    .then(r => r.arrayBuffer())
+    .then(buf => audioCtx.decodeAudioData(buf))
+    .then(buffer => {
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+      source.start(0);
+    });
 }
 
 
@@ -746,6 +771,16 @@ function showToast(type, message) {
     playToastSound(type);
   }
 }
+
+// -----------------
+// Background Sound
+// -----------------
+
+backgroundAudio.volume = 0.5;
+
+document.addEventListener('click', function() {
+  backgroundAudio.play();
+});
 
 // ---------------------------
 // Doctor High-Level Commands
