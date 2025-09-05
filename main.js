@@ -115,8 +115,8 @@ const elements = {
   practiceScreen: document.getElementById('practice-screen'),
   game1Screen: document.getElementById('game-screen-1'),
   game2Screen: document.getElementById('game-screen-2'),
+  backgroundAudio: document.getElementById('background-audio'),
 };
-const backgroundAudio = document.getElementById('background-audio');
 
 // Navigation Functions
 // main.js
@@ -446,6 +446,7 @@ function setupThemeSwitcher() {
 // Mode Selection Handlers
 function setupModeSelection() {
   const practiceBtn = document.getElementById('practice-mode-btn');
+  const gameBtn = document.getElementById('game-mode-btn');
   const game1Btn = document.getElementById('game-mode-btn-1');
   const game2Btn = document.getElementById('game-mode-btn-2');
   const settingsBtn = document.getElementById('settings-btn');
@@ -454,6 +455,10 @@ function setupModeSelection() {
     practiceBtn.addEventListener('click', () => navigateToScreen('practice-screen'));
   }
   
+  if (gameBtn) {
+    gameBtn.addEventListener('click', () => navigateToScreen('game-selection-screen'));
+  }
+
   if (game1Btn) {
     game1Btn.addEventListener('click', () => navigateToScreen('game-screen-1'));
   }
@@ -776,10 +781,10 @@ function showToast(type, message) {
 // Background Sound
 // -----------------
 
-backgroundAudio.volume = 0.5;
+elements.backgroundAudio.volume = 0.5;
 
 document.addEventListener('click', function() {
-  backgroundAudio.play();
+  elements.backgroundAudio.play();
 });
 
 // ---------------------------
