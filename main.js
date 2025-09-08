@@ -8,13 +8,12 @@ const TOAST_SOUND_LEADINS = {
 
 // Toast sound sources (host locally in /sounds/toasts/)
 const TOAST_SOUNDS = {
-  success: "/sounds/toasts/success.mp3",   // DOORS achievement
-  error:   "/sounds/toasts/error.mp3",     
-  warning: "/sounds/toasts/warning.mp3",   
-  info:    "/sounds/toasts/info.mp3"       // badge/info sound
+  success: "/sounds/toasts/success.mp3",
+  error:   "/sounds/toasts/error.mp3",
+  warning: "/sounds/toasts/warning.mp3",
+  info:    "/sounds/toasts/info.mp3"
 };
 
-let audioCtx;
 function initAudioContext() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -24,9 +23,17 @@ function initAudioContext() {
   }
 }
 
-// Unlock audio on first interaction
+// Add a constant to hold the silent audio element
+const silenceAudio = document.getElementById("silence");
+
+// Unlock audio on first interaction and start silent sound
 ["click", "touchstart", "keydown"].forEach(evt => {
-  window.addEventListener(evt, initAudioContext, { once: true });
+  window.addEventListener(evt, () => {
+    initAudioContext();
+    if (silenceAudio) {
+      silenceAudio.play();
+    }
+  }, { once: true });
 });
 
 
@@ -34,12 +41,12 @@ function initAudioContext() {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-import { 
-  getAuth, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged 
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getDatabase,
@@ -70,12 +77,12 @@ const db = getDatabase(app);
 window.firebaseApp = app;
 window.firebaseAuth = auth;
 window.firebaseDB = db;
-window.firebaseModules = { 
-  ref, 
-  set, 
-  get, 
+window.firebaseModules = {
+  ref,
+  set,
+  get,
   update,
-  createUserWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
@@ -116,7 +123,50 @@ const elements = {
   game1Screen: document.getElementById('game-screen-1'),
   game2Screen: document.getElementById('game-screen-2'),
   backgroundAudio: document.getElementById('background-audio'),
+  soundSettings: document.getElementById('sound-settings'),
+  soundSettingsBackBtn: document.getElementById('sound-settings-back'),
 };
+
+const backgroundAudio = document.getElementById("background-audio");
+
+// --- Global Audio Amplification Setup ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const gainNode = audioCtx.createGain();
+gainNode.gain.value = 1.0; // default = normal volume
+gainNode.connect(audioCtx.destination);
+
+// Unlock AudioContext on first user click (autoplay policy)
+["click", "touchstart", "keydown"].forEach(evt => {
+  window.addEventListener(evt, () => {
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  }, { once: true });
+});
+
+// Connect background music through gainNode
+const backgroundSource = audioCtx.createMediaElementSource(backgroundAudio);
+backgroundSource.connect(gainNode);
+
+// --- Volume Slider Integration ---
+const volumeSlider = document.getElementById("volume-slider");
+if (volumeSlider) {
+  volumeSlider.min = 0;
+  volumeSlider.max = 200;
+
+  const savedVolume = localStorage.getItem("masterVolume");
+  if (savedVolume !== null) {
+    volumeSlider.value = savedVolume;
+    gainNode.gain.value = savedVolume / 100;
+  } else {
+    volumeSlider.value = 100;
+  }
+
+  volumeSlider.addEventListener("input", (e) => {
+    const value = e.target.value;
+    gainNode.gain.value = value / 100; // 0–200 → 0.0–2.0
+    localStorage.setItem("masterVolume", value);
+  });
+}
+
 
 // Navigation Functions
 // main.js
@@ -125,7 +175,7 @@ const elements = {
 function navigateToScreen(screenId) {
   const appContainer = document.getElementById('app-container');
   const targetScreen = document.getElementById(screenId);
-  
+
   // Hide all screens first
   elements.screens.forEach(screen => {
     screen.classList.remove('active');
@@ -137,11 +187,11 @@ function navigateToScreen(screenId) {
     if (targetScreen) {
       targetScreen.classList.add('active');
       AppState.currentScreen = screenId;
-      
+
       // Calculate and set the new height for the app container
       const contentHeight = targetScreen.scrollHeight + 40; // Add padding
       appContainer.style.height = `${contentHeight}px`;
-      
+
       // Update browser history
       // window.history.pushState({ screen: screenId }, '', `#${screenId}`);
     }
@@ -163,7 +213,7 @@ function showMessage(element, message, isError = true) {
   if (element) {
     element.textContent = message;
     element.style.color = isError ? '#e67c7c' : '#28a745';
-    
+
     // Auto-clear success messages after 3 seconds
     if (!isError) {
       setTimeout(() => {
@@ -245,7 +295,7 @@ async function writeToDB_DEPRICATED(patientId, folderPath, isDirectory, fileName
 
   const { ref, set } = window.firebaseModules;
   const basePath = `users/patients/${patientId}/${folderPath}`;
-  
+
   if (isDirectory) {
     const folderRef = ref(window.firebaseDB, basePath);
     await set(folderRef, { 'ignore': true });
@@ -268,12 +318,12 @@ async function writeToDB_DEPRICATED(patientId, folderPath, isDirectory, fileName
  */
 async function writeToDB(path, data) {
   const { ref, set, update } = window.firebaseModules;
-  
+
   if (typeof path !== 'string' || !path) {
     console.error('Error: A valid path string is required for writing to the database.');
     return;
   }
-  
+
   try {
     const dataRef = ref(window.firebaseDB, path);
     if (typeof data === 'object' && data !== null && !Array.isArray(data) && Object.keys(data).length > 1) {
@@ -297,11 +347,12 @@ async function handleLogin(email, password) {
   try {
     const { signInWithEmailAndPassword } = window.firebaseModules;
     await signInWithEmailAndPassword(window.firebaseAuth, email, password);
+    showToast('success',`Logged In as ${email}`)
     console.log("Logged in as", email)
     return true;
   } catch (error) {
     console.error('Login error:', error);
-    
+
     let errorMessage = 'Login failed. Please try again.';
     if (error.code === 'auth/invalid-email') {
       errorMessage = 'Invalid email address.';
@@ -312,8 +363,8 @@ async function handleLogin(email, password) {
     } else if (error.code === 'auth/wrong-password') {
       errorMessage = 'Incorrect password.';
     }
-    
-    showMessage(elements.loginMessage, errorMessage);
+
+    showToast('warning',errorMessage)
     return false;
   }
 }
@@ -324,7 +375,7 @@ async function handleRegistration(username, email, password, designation) {
     const userCredential = await createUserWithEmailAndPassword(
       window.firebaseAuth, email, password,
     );
-    
+
     // Save user data to the correct, designation-specific path using writeToDB
     const userPath = `users/${designation}s/${userCredential.user.uid}`;
     await window.firebaseModules.writeToDB(userPath, {
@@ -333,7 +384,7 @@ async function handleRegistration(username, email, password, designation) {
       designation,
       createdAt: Date.now()
     });
-    
+
     // If the new user is a patient, create their base data folders
     if (designation === 'patient') {
       const patientDataPath = `users/patients/${userCredential.user.uid}/data`;
@@ -342,16 +393,17 @@ async function handleRegistration(username, email, password, designation) {
       await window.firebaseModules.writeToDB(`${patientDataPath}/Practice`, { 'placeholder': true });
       await window.firebaseModules.writeToDB(`${patientDataPath}/Settings`, { 'placeholder': true });
     }
-    
+
     handleLogin(email, password),
-    showMessage(elements.registerMessage, 'Registration successful! Redirecting...', false);
-    
+    showToast('success','Registration successful! Redirecting...')
+    // showMessage(elements.registerMessage, 'Registration successful! Redirecting...', false);
+
 
     return true;
 
   } catch (error) {
     console.error('Registration error:', error);
-    
+
     let errorMessage = 'Registration failed. Please try again.';
     if (error.code === 'auth/email-already-in-use') {
       errorMessage = 'This email is already registered.';
@@ -360,7 +412,7 @@ async function handleRegistration(username, email, password, designation) {
     } else if (error.code === 'auth/weak-password') {
       errorMessage = 'Password should be at least 6 characters.';
     }
-    
+
     showMessage(elements.registerMessage, errorMessage);
     return false;
   }
@@ -415,9 +467,6 @@ async function addEvaluation(sessionId, score, extraInfo) {
   }
 }
 
-
-
-
 // Theme Management
 function setupThemeSwitcher() {
   if (elements.lightModeBtn) {
@@ -427,7 +476,7 @@ function setupThemeSwitcher() {
       localStorage.setItem('theme', 'light-mode');
     });
   }
-  
+
   if (elements.darkModeBtn) {
     elements.darkModeBtn.addEventListener('click', () => {
       document.body.classList.add('dark-mode');
@@ -435,7 +484,7 @@ function setupThemeSwitcher() {
       localStorage.setItem('theme', 'dark-mode');
     });
   }
-  
+
   // Load saved theme
   const savedTheme = localStorage.getItem('theme');
   if (savedTheme) {
@@ -450,11 +499,12 @@ function setupModeSelection() {
   const game1Btn = document.getElementById('game-mode-btn-1');
   const game2Btn = document.getElementById('game-mode-btn-2');
   const settingsBtn = document.getElementById('settings-btn');
-  
+  const soundSettingsBtn = document.getElementById('sound-settings-btn')
+
   if (practiceBtn) {
     practiceBtn.addEventListener('click', () => navigateToScreen('practice-screen'));
   }
-  
+
   if (gameBtn) {
     gameBtn.addEventListener('click', () => navigateToScreen('game-selection-screen'));
   }
@@ -462,13 +512,17 @@ function setupModeSelection() {
   if (game1Btn) {
     game1Btn.addEventListener('click', () => navigateToScreen('game-screen-1'));
   }
-  
+
   if (game2Btn) {
     game2Btn.addEventListener('click', () => navigateToScreen('game-screen-2'));
   }
-  
+
   if (settingsBtn) {
     settingsBtn.addEventListener('click', () => navigateToScreen('settings-screen'));
+  }
+
+  if (soundSettingsBtn) {
+    soundSettingsBtn.addEventListener('click', () => navigateToScreen('sound-settings'))
   }
 
   // New Timer Logic for Games
@@ -503,7 +557,7 @@ function startTimer(duration, display) {
     seconds = seconds < 10 ? "0" + seconds : seconds;
 
     display.textContent = minutes + ":" + seconds;
-    
+
     if (--timer < 0) {
       clearInterval(gameInterval);
       display.textContent = "00:00";
@@ -538,38 +592,33 @@ window.enableDebugMode = function() {
   const practiceDebugBtn = createDebugButton("Increase Score");
   elements.practiceScreen.querySelector('.button-container').appendChild(practiceDebugBtn);
   practiceDebugBtn.addEventListener('click', async () => {
-    // Assuming a current session ID is available
-    const sessionId = 'session-xxxx'; // Replace with dynamic session ID
+    const sessionId = `session-${Date.now()}`;
     if (AppState.selectedPatientId && sessionId) {
       const scoreRef = ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/practice/sessions/${sessionId}/correctAttemps`);
       const snapshot = await get(scoreRef);
-      if (snapshot.exists()) {
-        const currentScore = snapshot.val();
-        await update(ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/practice/sessions/${sessionId}`), {
-          correctAttemps: currentScore + 10
-        });
-        practiceScoreDisplay.textContent = (parseInt(practiceScoreDisplay.textContent, 10) || 0) + 10;
-        console.log(`Score increased for Practice Mode. New score: ${parseInt(practiceScoreDisplay.textContent, 10)}`);
-      }
+      const currentScore = snapshot.exists() ? snapshot.val() : 0;
+      const path = `users/patients/${AppState.selectedPatientId}/data/practice/sessions/${sessionId}`;
+      const data = { correctAttemps: currentScore + 10 };
+      await writeToDB(path, data);
+      practiceScoreDisplay.textContent = (parseInt(practiceScoreDisplay.textContent, 10) || 0) + 10;
+      console.log(`Score increased for Practice Mode. New score: ${parseInt(practiceScoreDisplay.textContent, 10)}`);
     }
-  })};
+  });
 
-    // Add "Increase Score" button to Game 1
+  // Add "Increase Score" button to Game 1
   const game1DebugBtn = createDebugButton("Increase Score");
   elements.game1Screen.querySelector('.button-container').appendChild(game1DebugBtn);
   game1DebugBtn.addEventListener('click', async () => {
-    const sessionId = 'session-xxxx'; // Replace with dynamic session ID
+    const sessionId = `session-${Date.now()}`;
     if (AppState.selectedPatientId && sessionId) {
       const scoreRef = ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/games/game1/sessions/${sessionId}/finalScore`);
       const snapshot = await get(scoreRef);
-      if (snapshot.exists()) {
-        const currentScore = snapshot.val();
-        await update(ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/games/game1/sessions/${sessionId}`), {
-          finalScore: currentScore + 10
-        });
-        game1ScoreDisplay.textContent = (parseInt(game1ScoreDisplay.textContent, 10) || 0) + 10;
-        console.log(`Score increased for Game 1. New score: ${parseInt(game1ScoreDisplay.textContent, 10)}`);
-      }
+      const currentScore = snapshot.exists() ? snapshot.val() : 0;
+      const path = `users/patients/${AppState.selectedPatientId}/data/games/game1/sessions/${sessionId}`;
+      const data = { finalScore: currentScore + 10 };
+      await writeToDB(path, data);
+      game1ScoreDisplay.textContent = (parseInt(game1ScoreDisplay.textContent, 10) || 0) + 10;
+      console.log(`Score increased for Game 1. New score: ${parseInt(game1ScoreDisplay.textContent, 10)}`);
     }
   });
 
@@ -577,20 +626,19 @@ window.enableDebugMode = function() {
   const game2DebugBtn = createDebugButton("Increase Score");
   elements.game2Screen.querySelector('.button-container').appendChild(game2DebugBtn);
   game2DebugBtn.addEventListener('click', async () => {
-    const sessionId = 'session-xxx'; // Replace with dynamic session ID
+    const sessionId = `session-${Date.now()}`;
     if (AppState.selectedPatientId && sessionId) {
       const scoreRef = ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/games/game2/sessions/${sessionId}/finalScore`);
       const snapshot = await get(scoreRef);
-      if (snapshot.exists()) {
-        const currentScore = snapshot.val();
-        await update(ref(window.firebaseDB, `users/patients/${AppState.selectedPatientId}/data/games/game2/sessions/${sessionId}`), {
-          finalScore: currentScore + 10
-        });
-        game2ScoreDisplay.textContent = (parseInt(game2ScoreDisplay.textContent, 10) || 0) + 10;
-        console.log(`Score increased for Game 2. New score: ${parseInt(game2ScoreDisplay.textContent, 10)}`);
-      }
+      const currentScore = snapshot.exists() ? snapshot.val() : 0;
+      const path = `users/patients/${AppState.selectedPatientId}/data/games/game2/sessions/${sessionId}`;
+      const data = { finalScore: currentScore + 10 };
+      await writeToDB(path, data);
+      game2ScoreDisplay.textContent = (parseInt(game2ScoreDisplay.textContent, 10) || 0) + 10;
+      console.log(`Score increased for Game 2. New score: ${parseInt(game2ScoreDisplay.textContent, 10)}`);
     }
   });
+};
 
 
 // Initialize the application
@@ -604,7 +652,7 @@ function initApp() {
       await handleLogin(email, password);
     });
   }
-  
+
   if (elements.registerForm) {
     elements.registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -615,32 +663,32 @@ function initApp() {
       await handleRegistration(username, email, password, designation);
     });
   }
-  
+
   if (elements.logoutBtn) {
     elements.logoutBtn.addEventListener('click', handleLogout);
   }
-  
+
   // Set up navigation
   setupBackButtons();
   setupModeSelection();
   setupThemeSwitcher();
-  
+
   // Handle browser back/forward navigation
   window.addEventListener('popstate', (event) => {
     if (event.state && event.state.screen) {
       navigateToScreen(event.state.screen);
     }
   });
-  
+
   // Check initial hash for deep linking
   const initialHash = window.location.hash.substring(1);
   if (initialHash && document.getElementById(initialHash)) {
     navigateToScreen(initialHash);
   }
-  
+
   // Monitor auth state
   const { onAuthStateChanged, ref, get } = window.firebaseModules;
-  
+
   onAuthStateChanged(window.firebaseAuth, async (user) => {
     if (user) {
       // First, set the user object. We don't have the designation yet.
@@ -679,7 +727,7 @@ function initApp() {
           }
         }
       }
-      
+
       // If user data is still not found, handle as a generic user
       if (!userData) {
         navigateToScreen('mode-selection-screen');
@@ -695,29 +743,37 @@ function initApp() {
   });
 }
 
+/**
+ * Plays an audio element or URL through the global gainNode.
+ * @param {HTMLAudioElement|string} input - Audio element or URL.
+ */
+function playSound(input) {
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+
+  if (typeof input === "string") {
+    // Play sound from URL
+    fetch(input)
+      .then(r => r.arrayBuffer())
+      .then(buf => audioCtx.decodeAudioData(buf))
+      .then(buffer => {
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(gainNode);
+        source.start(0);
+      })
+      .catch(err => console.error("Error loading sound:", err));
+  } else if (input instanceof HTMLMediaElement) {
+    // Play <audio> element
+    input.play().catch(err => console.error("Error playing media element:", err));
+  }
+}
+
+
 // ---------------------------
 // Toast Notification System
 // ---------------------------
-
-function ensureAudioUnlocked() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-
-  if (audioCtx.state === "suspended") {
-    const unlock = () => {
-      audioCtx.resume().then(() => {
-        console.log("🔊 AudioContext unlocked");
-        document.removeEventListener("click", unlock);
-        document.removeEventListener("keydown", unlock);
-        document.removeEventListener("touchstart", unlock);
-      });
-    };
-    document.addEventListener("click", unlock);
-    document.addEventListener("keydown", unlock);
-    document.addEventListener("touchstart", unlock);
-  }
-}
 
 function playToastSound(type) {
   const url = TOAST_SOUNDS[type];
@@ -725,7 +781,7 @@ function playToastSound(type) {
 
   if (!audioCtx) {
     // fallback for browsers that don’t need unlock
-    new Audio(url).play();
+    playSound(url);
     return;
   }
 
@@ -735,7 +791,7 @@ function playToastSound(type) {
     .then(buffer => {
       const source = audioCtx.createBufferSource();
       source.buffer = buffer;
-      source.connect(audioCtx.destination);
+      source.connect(gainNode);
       source.start(0);
     });
 }
@@ -784,7 +840,7 @@ function showToast(type, message) {
 elements.backgroundAudio.volume = 0.5;
 
 document.addEventListener('click', function() {
-  elements.backgroundAudio.play();
+  playSound(backgroundAudio);
 });
 
 // ---------------------------
@@ -876,8 +932,6 @@ Object.assign(window.firebaseModules, {
   saveDataCommand,
   showToast,
 });
-
-
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', initApp);
