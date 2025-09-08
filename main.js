@@ -16,7 +16,7 @@ const TOAST_SOUNDS = {
 
 function initAudioContext() {
   if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx = new (window.AudioContext || window.AudioContext)();
   }
   if (audioCtx.state === "suspended") {
     audioCtx.resume();
@@ -25,6 +25,21 @@ function initAudioContext() {
 
 // Add a constant to hold the silent audio element
 const silenceAudio = document.getElementById("silence");
+
+// Application State
+const AppState = {
+  currentScreen: 'auth-screen',
+  practiceCount: 0,
+  isAuthenticated: false,
+  user: null,
+  selectedPatientId: null,
+  debugMode: false,
+  scores: {
+    practice: 0,
+    game1: 0,
+    game2: 0,
+  },
+};
 
 // Unlock audio on first interaction and start silent sound
 ["click", "touchstart", "keydown"].forEach(evt => {
@@ -94,18 +109,8 @@ window.firebaseModules = {
   selectPatient,
   unassignPatient,
   addEvaluation,
+  increaseScore,
 };
-
-// Application State
-const AppState = {
-  currentScreen: 'auth-screen',
-  practiceCount: 0,
-  isAuthenticated: false,
-  user: null,
-  selectedPatientId: null,
-  debugMode: false
-};
-
 
 // DOM Elements
 const elements = {
@@ -130,7 +135,7 @@ const elements = {
 const backgroundAudio = document.getElementById("background-audio");
 
 // --- Global Audio Amplification Setup ---
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioCtx = new (window.AudioContext || window.AudioContext)();
 const gainNode = audioCtx.createGain();
 gainNode.gain.value = 1.0; // default = normal volume
 gainNode.connect(audioCtx.destination);
@@ -394,8 +399,8 @@ async function handleRegistration(username, email, password, designation) {
       await window.firebaseModules.writeToDB(`${patientDataPath}/Settings`, { 'placeholder': true });
     }
 
-    handleLogin(email, password),
-    showToast('success','Registration successful! Redirecting...')
+    await handleLogin(email, password);
+    showToast('success','Registration successful! Redirecting...');
     // showMessage(elements.registerMessage, 'Registration successful! Redirecting...', false);
 
 
@@ -848,7 +853,7 @@ document.addEventListener('click', function() {
 // ---------------------------
 async function assignPatient(patientId) {
   if (!AppState.user || AppState.user.designation !== 'doctor') {
-    showToast("❌ Only doctors can assign patients.", "error");
+    showToast("error", "Only doctors can assign patients.");
     return { success: false, message: 'Not authorized' };
   }
   try {
@@ -868,7 +873,7 @@ async function assignPatient(patientId) {
 
 async function unassignPatient(patientId) {
   if (!AppState.user || AppState.user.designation !== 'doctor') {
-    showToast("❌ Only doctors can unassign patients.", "error");
+    showToast("error", "Only doctors can unassign patients.");
     return { success: false, message: 'Not authorized' };
   }
   try {
@@ -881,24 +886,24 @@ async function unassignPatient(patientId) {
     return { success: true, doctorId, patientId };
   } catch (err) {
     console.error(err);
-    showToast("❌ Failed to unassign patient.", "error");
+    showToast("error", "Failed to unassign patient.");
     return { success: false, message: err.message };
   }
 }
 
 function selectPatient(patientId) {
   AppState.selectedPatientId = patientId;
-  showToast(`📌 Selected patient: ${patientId}`, "info");
+  showToast("info", `📌 Selected patient: ${patientId}`);
   return { success: true, patientId };
 }
 
 async function saveDataCommand(score, extraInfo = "") {
   if (!AppState.user || AppState.user.designation !== 'doctor') {
-    showToast("❌ Only doctors can save data.", "error");
+    showToast("error", "Only doctors can save data.");
     return { success: false, message: 'Not authorized' };
   }
   if (!AppState.selectedPatientId) {
-    showToast("❌ No patient selected.", "error");
+    showToast("error", "No patient selected.");
     return { success: false, message: 'No patient selected' };
   }
   try {
@@ -913,14 +918,30 @@ async function saveDataCommand(score, extraInfo = "") {
       timestamp: serverTimestamp()
     };
     await writeToDB(path, payload);
-    showToast(`✅ Data saved for ${patientId} (session ${sessionId})`, "success");
+    showToast("success", `Data saved for ${patientId} (session ${sessionId})`);
     return { success: true, patientId, sessionId, data: payload };
   } catch (err) {
     console.error(err);
-    showToast("❌ Failed to save data.", "error");
+    showToast("error", "Failed to save data.");
     return { success: false, message: err.message };
   }
 }
+
+// --------------------------
+// New game scoring functions
+// --------------------------
+
+/**
+ * Increases the score for a specific game mode, provided it's currently active.
+ * @param {string} gamemode - The game mode for which to increase the score.
+ */
+function increaseScore(gamemode) {
+
+    AppState.scores[gamemode]++;
+    showToast("success", `Score for ${gamemode} is now: ${AppState.scores[gamemode]}`);
+}
+
+
 
 // ---------------------------
 // Add commands to global scope
