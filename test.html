@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Firebase Doctor Assign/Unassign + Cleanup Test</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { 
+      getAuth, 
+      createUserWithEmailAndPassword, 
+      signInWithEmailAndPassword, 
+      onAuthStateChanged, 
+      deleteUser, 
+      signOut 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { 
+      getDatabase, 
+      ref, 
+      set, 
+      onValue, 
+      serverTimestamp, 
+      remove 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC4o7uIHSqRChe0k5LZOfnFDCr-vBWoqvY",
+      authDomain: "speechster-1000.firebaseapp.com",
+      databaseURL: "https://speechster-1000-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "speechster-1000",
+      storageBucket: "speechster-1000.firebasestorage.app",
+      messagingSenderId: "543492593404",
+      appId: "1:543492593404:web:df0f06a3db1af716626979",
+      measurementId: "G-RM7GFYFZB9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // Test accounts
+    const patientEmail = "patient_test_cleanup@example.com";
+    const doctorEmail = "doctor_test_cleanup@example.com";
+    const password = "test1234";
+
+    let patientUid = null;
+    let doctorUid = null;
+
+    async function ensureUser(email, password) {
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        console.log("✅ User created:", email);
+        return cred.user;
+      } catch (err) {
+        if (err.code === "auth/email-already-in-use") {
+          const cred = await signInWithEmailAndPassword(auth, email, password);
+          console.log("🔄 Signed in:", email);
+          return cred.user;
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    async function runTest() {
+      // --- Patient setup ---
+      const patient = await ensureUser(patientEmail, password);
+      patientUid = patient.uid;
+      await set(ref(db, `users/patients/${patientUid}/profile`), {
+        username: "Test Patient",
+        email: patient.email,
+        createdAt: serverTimestamp()
+      });
+      await set(ref(db, `patientData/${patientUid}/sessions/session1`), {
+        score: 88,
+        timestamp: serverTimestamp()
+      });
+      console.log("✅ Patient profile & session written");
+
+      // --- Doctor setup ---
+      const doctor = await ensureUser(doctorEmail, password);
+      doctorUid = doctor.uid;
+      await set(ref(db, `users/doctors/${doctorUid}/profile`), {
+        username: "Test Doctor",
+        email: doctor.email,
+        createdAt: serverTimestamp()
+      });
+      console.log("✅ Doctor profile written");
+
+      // --- Assign patient ---
+      await set(ref(db, `users/doctors/${doctorUid}/assignedPatients/${patientUid}`), true);
+      console.log("✅ Doctor assigned patient");
+
+      // --- Doctor writes to patient data ---
+      await set(ref(db, `patientData/${patientUid}/data/doctorNote1`), {
+        note: "Doctor wrote this while assigned",
+        by: doctorUid,
+        timestamp: serverTimestamp()
+      });
+      console.log("✅ Doctor wrote patient data");
+
+      // --- Doctor reads patient data ---
+      onValue(ref(db, `patientData/${patientUid}`), snap => {
+        console.log("📥 Doctor sees patient data (assigned):", snap.val());
+      }, { onlyOnce: true });
+
+      // --- Unassign patient ---
+      await remove(ref(db, `users/doctors/${doctorUid}/assignedPatients/${patientUid}`));
+      console.log("🚫 Doctor unassigned patient");
+
+      // --- Doctor tries to write again (should fail) ---
+      try {
+        await set(ref(db, `patientData/${patientUid}/data/doctorNote2`), {
+          note: "This should FAIL after unassign",
+          by: doctorUid,
+          timestamp: serverTimestamp()
+        });
+        console.log("⚠️ Unexpected: doctor wrote after unassignment!");
+      } catch (err) {
+        console.log("✅ Expected block after unassign:", err.message);
+      }
+
+      // --- Patient signs back in and still sees their own data ---
+      await signInWithEmailAndPassword(auth, patientEmail, password);
+      console.log("🔄 Patient signed back in");
+      onValue(ref(db, `patientData/${patientUid}`), snap => {
+        console.log("📥 Patient sees their data (after unassign):", snap.val());
+      }, { onlyOnce: true });
+
+      console.log("✅ Test complete. Run cleanupEditedFiles() in console to remove test accounts + data.");
+    }
+
+    // --- Cleanup function (manual run) ---
+    window.cleanupEditedFiles = async function() {
+      if (!patientUid || !doctorUid) {
+        console.log("⚠️ Cannot cleanup: no UIDs found (did you run the test first?)");
+        return;
+      }
+      console.log("🧹 Cleaning up test data...");
+
+      try {
+        // --- Cleanup patient ---
+        await signInWithEmailAndPassword(auth, patientEmail, password);
+        await remove(ref(db, `users/patients/${patientUid}`));
+        await remove(ref(db, `patientData/${patientUid}`));
+        await deleteUser(auth.currentUser);
+        console.log("✅ Patient account + data deleted");
+
+        // --- Cleanup doctor ---
+        await signInWithEmailAndPassword(auth, doctorEmail, password);
+        await remove(ref(db, `users/doctors/${doctorUid}`));
+        await deleteUser(auth.currentUser);
+        console.log("✅ Doctor account + data deleted");
+
+        // --- Final sign out ---
+        await signOut(auth);
+        console.log("🚪 Signed out after cleanup");
+      } catch (err) {
+        console.error("❌ Cleanup error:", err.message);
+      }
+    };
+
+    runTest().catch(err => console.error("❌ Test error:", err.message));
+
+    onAuthStateChanged(auth, user => {
+      if (user) console.log("👤 Logged in as:", user.email);
+      else console.log("🚪 Logged out");
+    });
+  </script>
+</head>
+<body>
+  <h1>Check console for assign/unassign test results 🚀</h1>
+  <p>After the test completes, type <code>cleanupEditedFiles()</code> in the console to remove test accounts and data.</p>
+</body>
+</html>
