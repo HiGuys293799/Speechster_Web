@@ -1,17 +1,21 @@
 // Toast sound offsets (ms). Positive = play before toast, Negative = delay after toast
 const TOAST_SOUND_LEADINS = {
   success: 930,  // 1s before toast
-  error:   1500,   // 0.5s before toast
   warning: 100,   // 0.7s before toast
-  info:    300    // 0.3s before toast
+  info:    300,    // 0.3s before toast
+  "critical error": 1500,
+  "excellent!": 930,
+  "you can do better!": 100,
 };
 
 // Toast sound sources (host locally in /sounds/toasts/)
 const TOAST_SOUNDS = {
   success: "/sounds/toasts/success.mp3",
-  error:   "/sounds/toasts/error.mp3",
+  "critical error":   "/sounds/toasts/error.mp3",
   warning: "/sounds/toasts/warning.mp3",
-  info:    "/sounds/toasts/info.mp3"
+  info:    "/sounds/toasts/info.mp3",
+  "excellent!": "/sounds/toasts/success.mp3",
+  "you can do better!": "/sounds/toasts/warning.mp3",
 };
 
 function initAudioContext() {
@@ -29,7 +33,6 @@ const silenceAudio = document.getElementById("silence");
 // Application State
 const AppState = {
   currentScreen: 'auth-screen',
-  practiceCount: 0,
   isAuthenticated: false,
   user: null,
   selectedPatientId: null,
@@ -110,6 +113,9 @@ window.firebaseModules = {
   unassignPatient,
   addEvaluation,
   increaseScore,
+  saveDBData,
+  AppState,
+  connectToDevice,
 };
 
 // DOM Elements
@@ -133,6 +139,7 @@ const elements = {
   practiceScoreDisplay: document.getElementById('practice-score'),
   game1ScoreDisplay: document.getElementById('game-1-score'),
   game2ScoreDisplay: document.getElementById('game-2-score'),
+  connectBluetoothBtn: document.getElementById('bt-connect-btn'),
 };
 
 const backgroundAudio = document.getElementById("background-audio");
@@ -348,6 +355,89 @@ async function writeToDB(path, data) {
     throw error;
   }
 }
+
+/**
+ * Saves game score data to the Firebase Realtime Database.
+ * @param {string} mode - The game mode to save: 'practice', 'game1', or 'game2'.
+ */
+async function saveDBData(mode) {
+  // Check for a valid patient ID
+  if (!AppState.selectedPatientId) {
+    showToast("warning", "No patient selected. Cannot save data.");
+    return;
+  }
+  
+  // Check if the mode is valid and has an associated score
+  if (!AppState.scores.hasOwnProperty(mode)) {
+    showToast("error", `Invalid mode provided: ${mode}. Cannot save data.`);
+    return;
+  }
+
+  const patientId = AppState.selectedPatientId;
+  const sessionId = `session-${new Date().getTime()}`;
+  const path = `users/patients/${patientId}/data/${mode}/${sessionId}`;
+
+  if (mode === "practice") {
+    try {
+      const payload = {
+      "successSpoken": AppState.scores[mode],
+      }
+
+      await writeToDB(path, payload);
+      showToast("success", `Data saved for ${mode} (session ${sessionId})`);
+
+  } catch (error) {
+      console.error("Failed to save data:", error);
+      showToast("error", "Failed to save data. See console for details.");
+    }
+
+  } else if (mode === "game1") {
+    try {
+      const payload = {
+      "successTouch": AppState.scores[mode],
+      }
+
+      await writeToDB(path, payload);
+      showToast("success", `Data saved for ${mode} (session ${sessionId})`);
+
+  } catch (error) {
+      console.error("Failed to save data:", error);
+      showToast("error", "Failed to save data. See console for details.");
+    }
+  } else if (mode === "game2") {
+    try {
+      const payload = {
+      "successSpoken": AppState.scores[mode],
+      }
+
+      await writeToDB(path, payload);
+      showToast("success", `Data saved for ${mode} (${sessionId})`);
+
+  } catch (error) {
+      console.error("Failed to save data:", error);
+      showToast("error", "Failed to save data. See console for details.");
+    }
+  }
+
+/**  try {
+    const patientId = AppState.selectedPatientId;
+    const sessionId = `session-${new Date().getTime()}`;
+    
+    const path = `users/patients/${patientId}/data/${mode}/${sessionId}`;
+    
+    // Corrected payload to use 'successTouches'
+    const payload = {
+      "successTouches": AppState.scores[mode],
+    };
+
+    // Use the existing writeToDB function to save the data
+    await writeToDB(path, payload);
+    showToast("success", `Data saved for ${mode} (session ${sessionId})`);
+  } catch (error) {
+    console.error("Failed to save data:", error);
+    showToast("error", "Failed to save data. See console for details.");
+  } */
+} 
 
 
 // Authentication Functions
@@ -659,6 +749,9 @@ function initApp() {
       const password = document.getElementById('login-password').value;
       await handleLogin(email, password);
     });
+
+  // Is Bluetooth Supported?
+  isBluetoothSupported();
   }
 
   if (elements.registerForm) {
@@ -749,7 +842,13 @@ function initApp() {
       }
     }
   });
-}
+
+  if (elements.connectBluetoothBtn) {
+    elements.connectBluetoothBtn.addEventListener('click', () => {
+      connectToDevice();
+    });
+
+}}
 
 /**
  * Plays an audio element or URL through the global gainNode.
@@ -816,7 +915,8 @@ function showToast(type, message) {
   if (type === "success") icon = "✅";
   if (type === "error")   icon = "❌";
   if (type === "warning") icon = "⚠️";
-
+  if (type === "Critical Error") icon = "❗";
+ 
   toast.innerHTML = `
     <div class="toast-icon">${icon}</div>
     <div>
@@ -856,21 +956,30 @@ document.addEventListener('click', function() {
 // ---------------------------
 async function assignPatient(patientId) {
   if (!AppState.user || AppState.user.designation !== 'doctor') {
-    showToast("error", "Only doctors can assign patients.");
-    return { success: false, message: 'Not authorized' };
+    showToast("critical error", "Only doctors can assign patients.");
+    return {
+      success: false,
+      message: 'Not authorized'
+    };
   }
   try {
     const doctorId = AppState.user.uid;
-    const updates = {};
-    updates[`users/doctors/${doctorId}/assignedPatients/${patientId}`] = true;
-    updates[`users/patients/${patientId}/assignedTo`] = doctorId;
-    await writeToDB('/', updates);
-    showToast(`success`, "Patient ${patientId} assigned");
-    return { success: true, doctorId, patientId };
+    await writeToDB(`users/doctors/${doctorId}/assignedPatients/${patientId}`, true);
+    await writeToDB(`users/patients/${patientId}/data/assignedTo`, doctorId);
+    showToast("success", `Patient ${patientId} assigned`);
+    AppState.selectedPatientId = patientId; // Corrected line
+    return {
+      success: true,
+      doctorId,
+      patientId
+    };
   } catch (err) {
     console.error(err);
-    showToast("error", "Failed To Assign Patient (check Console Logs!)");
-    return { success: false, message: err.message };
+    showToast("critical error", "Failed to assign patient (check Console Logs!)");
+    return {
+      success: false,
+      message: err.message
+    };
   }
 }
 
@@ -883,7 +992,7 @@ async function unassignPatient(patientId) {
     const doctorId = AppState.user.uid;
     const updates = {};
     updates[`users/doctors/${doctorId}/assignedPatients/${patientId}`] = null;
-    updates[`users/patients/${patientId}/assignedTo`] = null;
+    updates[`users/patients/${patientId}/data/assignedTo`] = null;
     await writeToDB('/', updates);
     showToast(`✅ Patient ${patientId} unassigned.`, "success");
     return { success: true, doctorId, patientId };
@@ -955,6 +1064,64 @@ function increaseScore(gamemode) {
     showToast("info", `Score for ${gamemode} is now: ${AppState.scores[gamemode]}`);
 }
 
+/**
+ * Checks if the Web Bluetooth API is supported by the browser.
+ * @returns {boolean} True if supported, false otherwise.
+ */
+function isBluetoothSupported() {
+  console.log("Checking BT Support")
+  if (!('bluetooth' in navigator)) {
+    showToast("Critical Error", "Chrome with Web Bluetooth API Enabled is REQUIRED to use Bluetooth-based services.")
+    console.log("BT Unsupported.")
+    return;
+  }
+  console.log("BT Avail")
+}
+
+/**
+ * Connects to a Bluetooth device and reads a characteristic's value.
+ */
+async function connectToDevice() {
+
+  // These lines caused the error and have been removed
+  // because the HTML elements do not exist.
+  // elements.bluetoothStatus.textContent = "Scanning for devices...";
+  
+  try {
+    // 1. Request the Bluetooth device
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: ['battery_service'] }] // Example: 'battery_service'
+    });
+    
+    // This line caused the error and has been removed
+    // elements.bluetoothStatus.textContent = `Connecting to "${device.name}"...`;
+    
+    // 2. Connect to the GATT server
+    const server = await device.gatt.connect();
+    
+    // 3. Get the service
+    const service = await server.getPrimaryService('battery_service');
+    
+    // 4. Get the characteristic
+    const characteristic = await service.getCharacteristic('battery_level');
+    
+    // 5. Read the value from the characteristic
+    const value = await characteristic.readValue();
+    const batteryLevel = value.getUint8(0);
+    
+    // These lines caused the error and have been removed.
+    // Use console.log for debugging instead.
+    // elements.bluetoothStatus.textContent = `Connected! Device: ${device.name}`;
+    // elements.bluetoothDataDisplay.textContent = `Battery Level: ${batteryLevel}%`;
+    
+    showToast("success", `Successfully connected to ${device.name}. Battery: ${batteryLevel}%`);
+    console.log(`Connected to device: ${device.name}. Battery Level: ${batteryLevel}%`);
+    
+  } catch (error) {
+    showToast("critical error", "Bluetooth connection failed. See console.");
+    console.error("Bluetooth connection error:", error);
+  }
+}
 
 
 // ---------------------------
@@ -969,4 +1136,4 @@ Object.assign(window.firebaseModules, {
 });
 
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', initApp)
