@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Speechster 1000</title>
   <link rel="stylesheet" href="/style.css" />
-  <script type="module" src="/main.js"></script>
 </head>
 <body class="dark-mode">
 
@@ -88,7 +87,7 @@
       <button id="practice-back" class="back-btn">&#8592;</button>
       <h1>Practice Mode</h1>
       <p>Successfully make the sound told by your therapist.</p>
-      <span class="score-display" id="practice-count">0</span>
+      <span class="score-display" id="practice-score">0</span>
     </div>
 
     <!-- Game 1 -->
@@ -164,35 +163,6 @@
     </div>
   </div>
 
-  <!-- Firebase Modules -->
-  <script type="module">
-   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getDatabase, ref, set, push, onValue, serverTimestamp } 
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyC4o7uIHSqRChe0k5LZOfnFDCr-vBWoqvY",
-      authDomain: "speechster-1000.firebaseapp.com",
-      databaseURL: "https://speechster-1000-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "speechster-1000",
-      storageBucket: "speechster-1000.firebasestorage.app",
-      messagingSenderId: "543492593404",
-      appId: "1:543492593404:web:df0f06a3db1af716626979",
-      measurementId: "G-RM7GFYFZB9"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
-
-    // Make auth/db accessible to main.js
-    window.firebaseApp = app;
-    window.firebaseAuth = auth;
-    window.firebaseDb = db;
-
-  </script>
+<script type="module" src="/main.js"></script>
 </body>
 </html>

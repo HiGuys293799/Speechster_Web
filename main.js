@@ -130,6 +130,9 @@ const elements = {
   backgroundAudio: document.getElementById('background-audio'),
   soundSettings: document.getElementById('sound-settings'),
   soundSettingsBackBtn: document.getElementById('sound-settings-back'),
+  practiceScoreDisplay: document.getElementById('practice-score'),
+  game1ScoreDisplay: document.getElementById('game-1-score'),
+  game2ScoreDisplay: document.getElementById('game-2-score'),
 };
 
 const backgroundAudio = document.getElementById("background-audio");
@@ -931,14 +934,25 @@ async function saveDataCommand(score, extraInfo = "") {
 // New game scoring functions
 // --------------------------
 
+function updateScoreDisplay() {
+  elements.practiceScoreDisplay.textContent = AppState.scores.practice;
+  elements.game1ScoreDisplay.textContent = AppState.scores.game1;
+  elements.game2ScoreDisplay.textContent = AppState.scores.game2;
+}
+
 /**
  * Increases the score for a specific game mode, provided it's currently active.
  * @param {string} gamemode - The game mode for which to increase the score.
  */
 function increaseScore(gamemode) {
-
     AppState.scores[gamemode]++;
-    showToast("success", `Score for ${gamemode} is now: ${AppState.scores[gamemode]}`);
+    updateScoreDisplay();
+    if (AppState.scores[gamemode]%10 == 0) {
+      showToast("success", `Score for ${gamemode} is now: ${AppState.scores[gamemode]}, a multiple of 10!`);
+      return;
+    }
+
+    showToast("info", `Score for ${gamemode} is now: ${AppState.scores[gamemode]}`);
 }
 
 
