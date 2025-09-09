@@ -1089,9 +1089,7 @@ async function connectToDevice() {
   
   try {
     // 1. Request the Bluetooth device
-    const device = await navigator.bluetooth.requestDevice({
-      filters: [{ services: ['battery_service'] }] // Example: 'battery_service'
-    });
+    const device = await navigator.bluetooth.requestDevice({acceptAllDevices: true});
     
     // This line caused the error and has been removed
     // elements.bluetoothStatus.textContent = `Connecting to "${device.name}"...`;
@@ -1100,10 +1098,10 @@ async function connectToDevice() {
     const server = await device.gatt.connect();
     
     // 3. Get the service
-    const service = await server.getPrimaryService('battery_service');
+    // const service = await server.getPrimaryService('battery_service');
     
     // 4. Get the characteristic
-    const characteristic = await service.getCharacteristic('battery_level');
+    // const characteristic = await service.getCharacteristic('battery_level');
     
     // 5. Read the value from the characteristic
     const value = await characteristic.readValue();
