@@ -3,11 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Speechster 1000</title>
+  <title>Speechster X1</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body class="dark-mode">
-
   <audio id="background-audio" loop preload="auto">
     <source src="/sounds/backgroundSound.mp3" type="audio/mpeg">
   </audio>
@@ -15,13 +14,18 @@
 
   <noscript><p style="color:red;text-align:center">Please enable JavaScript to use Speechster 1000.</p></noscript>
 
-  <div id="particle-container"></div>
+  <video autoplay muted loop playsinline id="background-video">
+    <!--<source src="/videos/backgrounds/background.webm" type="video/webm"> -->
+    <source src="/videos/backgrounds/background.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+  </video>
+
 
   <div id="app-container">
     <!-- Auth Screen -->
     <div id="auth-screen" class="screen active">
       <h1>Welcome to Speechster 1000</h1>
-      <p>Please log in or register to continue.</p>
+      <p>Please login or register to continue.</p>
       <div id="auth-forms-container">
         <form id="login-form">
           <h2>Login</h2>
@@ -65,6 +69,7 @@
       </div>
       <div class="bottom-buttons">
         <button id="bt-connect-btn" class="btn">Connect</button>
+        <button id="patient-select-btn" class="btn">Select Patient</button>
         <button id="settings-btn" class="btn">Settings</button>
       </div>
       <button id="logout-btn" class="btn logout-btn">Log Out</button>
@@ -83,7 +88,7 @@
     </div>
 
     <!-- Practice -->
-<div id="practice-screen" class="screen">
+    <div id="practice-screen" class="screen">
       <button id="practice-back" class="back-btn">&#8592;</button>
       <h1>Practice Mode</h1>
       <p>Successfully make the sound told by your therapist.</p>
@@ -91,7 +96,7 @@
     </div>
 
     <!-- Game 1 -->
-<div id="game-screen-1" class="screen">
+    <div id="game-screen-1" class="screen">
       <button id="game-1-back" class="back-btn">&#8592;</button>
       <h1>Game 1: Tongue Sensor</h1>
       <p>Click "Start!" to start the 3-minute timer. The score will increase every time you touch the top part of your mouth.</p>
@@ -104,7 +109,7 @@
     </div>
 
     <!-- Game 2 -->
-<div id="game-screen-2" class="screen">
+    <div id="game-screen-2" class="screen">
       <button id="game-2-back" class="back-btn">&#8592;</button>
       <h1>Game 2: Word Recognition</h1>
       <p>Click "Start!" to begin the 1-minute timer. The word will change every time you successfully say the word specified.</p>
@@ -131,22 +136,64 @@
     </div>
 
       <!-- Sound Control - Settings Subpage-->
-  <div id="sound-settings" class="screen">
-    <button id="sound-settings-back" class="back-btn">&#8592;</button>
-
-    <!-- NEW SLIDER CODE -->
-    <div class="slider-card">
-      <h2 class="slider-title">Master Volume Control</h2>
-      <div class="slider-container">
-        <input type="range" min="0" max="300" value="20" id="volume-slider">
+    <div id="sound-settings" class="screen">
+      <button id="sound-settings-back" class="back-btn">&#8592;</button>
+      <h1>Sound Settings</h1>
+      <p>Adjust the volume levels to your preference.</p>
+      <hr />
+      <div class="slider-card">
+        <h2 class="slider-title">Master Volume Control</h2>
+        <div class="slider-container">
+          <input type="range" min="0" max="300" value="20" id="volume-slider">
+        </div>
       </div>
     </div>
-</div>
+    
+  <!-- Patient Selection Screen -->
+   <div id="patient-selection-screen" class="screen">
+      <button id="patient-selection-back" class="back-btn">&#8592;</button>
+      <h1>Select Patient</h1>
+      <p>Choose a patient to proceed.</p>
+      <hr />
+      <div id="patient-list" class="patient-list">
+        <!-- Patient items will be dynamically added here -->
+      </div>
+    </div>
 
+    <!-- Patient Dashboard -->
+    <div id="patient-dashboard-screen" class="screen">
+      <h1>Patient Dashboard</h1>
+      <p>View Your Current Progress!</p>
+      <hr />
+      <div id="session-history">
+        <h2>Session History</h2>
+        <ul id="session-list">
+          <!-- Session items will be dynamically added here -->
+        </ul>
+      </div>
+      <button id="logout-btn" class="btn logout-btn" onclick="handleLogout()">Log Out</button>
+
+  </div>
   </div>
 
   <!-- Toast Container -->
-  <div id="toast-container"></div>
+  <div id="toast-container">
+  <div class="toast toast-success">
+    <div class="toast-icon">✅</div>
+    <div>
+      <div class="toast-header">Success</div>
+      <div class="toast-body">Patient data saved successfully.</div>
+    </div>
+  </div>
+
+  <div class="toast toast-error">
+    <div class="toast-icon">❌</div>
+    <div>
+      <div class="toast-header">Error</div>
+      <div class="toast-body">Failed to assign patient. Please try again.</div>
+    </div>
+  </div>
+</div>
 
 <script type="module" src="/main.js"></script>
 </body>

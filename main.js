@@ -1,20 +1,20 @@
 // Toast sound offsets (ms). Positive = play before toast, Negative = delay after toast
 const TOAST_SOUND_LEADINS = {
-  success: 930,  // 1s before toast
-  warning: 100,   // 0.7s before toast
-  info:    300,    // 0.3s before toast
-  "critical error": 1500,
-  "excellent!": 930,
+  success:              930,  // 1s before toast
+  warning:              100,   // 0.7s before toast
+  info:                 300,    // 0.3s before toast
+  "critical error":     1500,
+  "excellent!":         930,
   "you can do better!": 100,
 };
 
 // Toast sound sources (host locally in /sounds/toasts/)
 const TOAST_SOUNDS = {
-  success: "/sounds/toasts/success.mp3",
-  "critical error":   "/sounds/toasts/error.mp3",
-  warning: "/sounds/toasts/warning.mp3",
-  info:    "/sounds/toasts/info.mp3",
-  "excellent!": "/sounds/toasts/success.mp3",
+  success:              "/sounds/toasts/success.mp3",
+  "critical error":     "/sounds/toasts/error.mp3",
+  warning:              "/sounds/toasts/warning.mp3",
+  info:                 "/sounds/toasts/info.mp3",
+  "excellent!":         "/sounds/toasts/success.mp3",
   "you can do better!": "/sounds/toasts/warning.mp3",
 };
 
@@ -64,14 +64,15 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getDatabase,
   ref,
   set,
   get,
-  update
+  update,
+  onValue
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 // Firebase configuration
@@ -111,7 +112,6 @@ window.firebaseModules = {
   handleLogout,
   selectPatient,
   unassignPatient,
-  addEvaluation,
   increaseScore,
   saveDBData,
   AppState,
@@ -140,9 +140,9 @@ const elements = {
   game1ScoreDisplay: document.getElementById('game-1-score'),
   game2ScoreDisplay: document.getElementById('game-2-score'),
   connectBluetoothBtn: document.getElementById('bt-connect-btn'),
+  patientSelectionScreen: document.getElementById('patient-selection-screen'),
+  patientDashboard: document.getElementById('patient-dashboard'),
 };
-
-const backgroundAudio = document.getElementById("background-audio");
 
 // --- Global Audio Amplification Setup ---
 let audioCtx = new (window.AudioContext || window.AudioContext)();
@@ -158,7 +158,7 @@ gainNode.connect(audioCtx.destination);
 });
 
 // Connect background music through gainNode
-const backgroundSource = audioCtx.createMediaElementSource(backgroundAudio);
+const backgroundSource = audioCtx.createMediaElementSource(elements.backgroundAudio);
 backgroundSource.connect(gainNode);
 
 // --- Volume Slider Integration ---
@@ -186,31 +186,64 @@ if (volumeSlider) {
 // Navigation Functions
 // main.js
 
-// In main.js, inside the navigateToScreen function
-function navigateToScreen(screenId) {
-  const appContainer = document.getElementById('app-container');
-  const targetScreen = document.getElementById(screenId);
+function animateScreenSwitch(newScreenId) {
+  const appContainer = document.getElementById("app-container");
+  const currentScreen = document.querySelector(".screen.active");
+  const newScreen = document.getElementById(newScreenId);
 
-  // Hide all screens first
-  elements.screens.forEach(screen => {
-    screen.classList.remove('active');
-  });
+  if (!appContainer || !newScreen || newScreen === currentScreen) return;
 
-  // Wait for the DOM to update with the new screen's content
-  requestAnimationFrame(() => {
-    // Show the requested screen
-    if (targetScreen) {
-      targetScreen.classList.add('active');
-      AppState.currentScreen = screenId;
+  const startHeight = appContainer.offsetHeight;
 
-      // Calculate and set the new height for the app container
-      const contentHeight = targetScreen.scrollHeight + 40; // Add padding
-      appContainer.style.height = `${contentHeight}px`;
+  if (currentScreen) currentScreen.classList.remove("active");
+  newScreen.classList.add("active");
 
-      // Update browser history
-      // window.history.pushState({ screen: screenId }, '', `#${screenId}`);
+  // force reflow
+  newScreen.offsetHeight;
+
+  const endHeight = newScreen.offsetHeight;
+
+  appContainer.style.height = startHeight + "px";
+  appContainer.offsetHeight; // trigger reflow
+
+  appContainer.style.height = endHeight + "px";
+
+  const onTransitionEnd = (e) => {
+    if (e.propertyName === "height") {
+      appContainer.style.height = "auto";
+      appContainer.removeEventListener("transitionend", onTransitionEnd);
     }
+  };
+  appContainer.addEventListener("transitionend", onTransitionEnd);
+}
+
+
+// Function to navigate between screens
+function navigateToScreen(screenId) {
+  // Get all screens and the main app container
+  const allScreens = document.querySelectorAll('.screen');
+  const appContainer = document.getElementById('app-container');
+
+  // First, hide all screens by setting their display to 'none'
+  allScreens.forEach(screen => {
+    screen.style.display = 'none';
   });
+
+  // Then, set the main app container to 'block' to make sure it's visible and doesn't collapse
+  if (appContainer) {
+    appContainer.style.display = 'block';
+  }
+
+  // Finally, show the specific screen you want to navigate to
+  const targetScreen = document.getElementById(screenId);
+  if (targetScreen) {
+    targetScreen.style.display = 'block';
+    AppState.currentScreen = screenId;
+    console.log(`Navigated to screen: ${screenId}`);
+  } else {
+    console.error(`Screen with ID "${screenId}" not found.`);
+    showToast("critical error", `Screen with ID "${screenId}" not found.`);
+  }
 }
 
 // Back button handlers
@@ -384,11 +417,11 @@ async function saveDBData(mode) {
       }
 
       await writeToDB(path, payload);
-      showToast("success", `Data saved for ${mode} (session ${sessionId})`);
+      showToast("success", `Data saved for ${mode} (${sessionId})`);
 
   } catch (error) {
       console.error("Failed to save data:", error);
-      showToast("error", "Failed to save data. See console for details.");
+      showToast("critical error", "Failed to save data. See console for details.");
     }
 
   } else if (mode === "game1") {
@@ -398,7 +431,7 @@ async function saveDBData(mode) {
       }
 
       await writeToDB(path, payload);
-      showToast("success", `Data saved for ${mode} (session ${sessionId})`);
+      showToast("success", `Data saved for ${mode} (${sessionId})`);
 
   } catch (error) {
       console.error("Failed to save data:", error);
@@ -415,7 +448,7 @@ async function saveDBData(mode) {
 
   } catch (error) {
       console.error("Failed to save data:", error);
-      showToast("error", "Failed to save data. See console for details.");
+      showToast("critical error", "Failed to save data. See console for details.");
     }
   }
 
@@ -527,44 +560,6 @@ async function handleLogout() {
   }
 }
 
-
-/**
- * Saves an evaluation session for the selected patient.
- * @param {string} sessionId A unique ID for this session (e.g., 'session1').
- * @param {number} score The evaluation score.
- * @param {string} extraInfo Additional notes from the doctor.
- */
-async function addEvaluation(sessionId, score, extraInfo) {
-  if (!AppState.user || AppState.user.designation !== 'doctor') {
-    console.error('Current user is not a doctor or not authenticated.');
-    return;
-  }
-
-  if (!AppState.selectedPatientId) {
-    console.error('No patient selected. Use selectPatient(patientId) first.');
-    return;
-  }
-
-  const doctorId = AppState.user.uid;
-  const patientId = AppState.selectedPatientId;
-
-  try {
-    const path = `patientData/${patientId}/sessions/${sessionId}`;
-    const sessionData = {
-      score,
-      extraInfo,
-      by: doctorId,
-      timestamp: serverTimestamp()
-    };
-
-    await window.firebaseModules.writeToDB(path, sessionData);
-    console.log(`Evaluation saved for patient ${patientId}, session ${sessionId}`);
-  } catch (error) {
-    console.error('Error saving evaluation:', error);
-    alert('Failed to save evaluation. Please try again.');
-  }
-}
-
 // Theme Management
 function setupThemeSwitcher() {
   if (elements.lightModeBtn) {
@@ -598,6 +593,7 @@ function setupModeSelection() {
   const game2Btn = document.getElementById('game-mode-btn-2');
   const settingsBtn = document.getElementById('settings-btn');
   const soundSettingsBtn = document.getElementById('sound-settings-btn')
+  const patientSelectBtn = document.getElementById('patient-select-btn');
 
   if (practiceBtn) {
     practiceBtn.addEventListener('click', () => navigateToScreen('practice-screen'));
@@ -621,6 +617,10 @@ function setupModeSelection() {
 
   if (soundSettingsBtn) {
     soundSettingsBtn.addEventListener('click', () => navigateToScreen('sound-settings'))
+  }
+
+  if (patientSelectBtn) {
+    patientSelectBtn.addEventListener('click', () => navigateToScreen('patient-selection-screen'));
   }
 
   // New Timer Logic for Games
@@ -809,7 +809,7 @@ function initApp() {
         // Update AppState.user with the full data
         AppState.user = { ...AppState.user, ...userData };
         if (AppState.user.designation === 'patient') {
-          window.location.href = 'patients/patient.html';
+          navigateToScreen('patient-dashboard-screen');
           return;
         }
       }
@@ -824,6 +824,7 @@ function initApp() {
           AppState.user = { ...AppState.user, ...userData };
           if (AppState.user.designation === 'doctor') {
             navigateToScreen('mode-selection-screen');
+            fetchAndPopulatePatients()
             return;
           }
         }
@@ -915,7 +916,7 @@ function showToast(type, message) {
   if (type === "success") icon = "✅";
   if (type === "error")   icon = "❌";
   if (type === "warning") icon = "⚠️";
-  if (type === "Critical Error") icon = "❗";
+  if (type === "critical error") icon = "❗";
  
   toast.innerHTML = `
     <div class="toast-icon">${icon}</div>
@@ -948,7 +949,7 @@ function showToast(type, message) {
 elements.backgroundAudio.volume = 0.5;
 
 document.addEventListener('click', function() {
-  playSound(backgroundAudio);
+  playSound(elements.backgroundAudio);
 });
 
 // ---------------------------
@@ -1040,7 +1041,69 @@ async function saveDataCommand(score, extraInfo = "") {
 }
 
 // --------------------------
-// New game scoring functions
+// Other Low-Level Functions
+// --------------------------
+
+/**
+ * Fetches the list of patients from the database and populates the UI.
+ * This function uses an onValue listener for real-time updates.
+ */
+function fetchAndPopulatePatients() {
+  const patientListRef = ref(db, 'users/patients');
+  const patientListElement = document.getElementById('patient-list');
+
+  onValue(patientListRef, (snapshot) => {
+    // Clear the current list to prevent duplicates
+    if (patientListElement) {
+      patientListElement.innerHTML = '';
+    }
+
+    // Check if data exists
+    if (snapshot.exists()) {
+      const patients = snapshot.val();
+      Object.keys(patients).forEach(patientId => {
+        const patientData = patients[patientId];
+        const patientUsername = patientData.username || patientId; // Use username if available, otherwise fall back to the ID
+
+        // Create a button element for each patient
+        const patientBtn = document.createElement('button');
+        patientBtn.className = 'btn patient-btn';
+        patientBtn.textContent = patientUsername;
+        
+        // Store the patient ID and name for later use
+        patientBtn.dataset.patientId = patientId;
+        patientBtn.dataset.patientUsername = patientUsername;
+
+        // Add a click listener to select the patient
+        patientBtn.addEventListener('click', () => {
+          selectPatient(patientId, patientUsername);
+        });
+
+        if (patientListElement) {
+          patientListElement.appendChild(patientBtn);
+        }
+      });
+      console.log("Patient list populated successfully.");
+    } else {
+      // If no patients exist, display a message
+      const noPatientsMessage = document.createElement('p');
+      noPatientsMessage.textContent = "No patients found.";
+      if (patientListElement) {
+        patientListElement.appendChild(noPatientsMessage);
+      }
+      console.log("No patients found in the database.");
+    }
+  }, {
+    // Optional: handle errors
+    error: (error) => {
+      console.error("Error fetching patients:", error);
+      showToast("critical error", "Failed to fetch patients. See console for details.");
+     }
+  });
+}
+
+// --------------------------
+// Game Score Functions
 // --------------------------
 
 function updateScoreDisplay() {
@@ -1064,6 +1127,10 @@ function increaseScore(gamemode) {
     showToast("info", `Score for ${gamemode} is now: ${AppState.scores[gamemode]}`);
 }
 
+//---------------------
+// Bluetooth Functions
+//--------------------
+
 /**
  * Checks if the Web Bluetooth API is supported by the browser.
  * @returns {boolean} True if supported, false otherwise.
@@ -1071,7 +1138,7 @@ function increaseScore(gamemode) {
 function isBluetoothSupported() {
   console.log("Checking BT Support")
   if (!('bluetooth' in navigator)) {
-    showToast("Critical Error", "Chrome with Web Bluetooth API Enabled is REQUIRED to use Bluetooth-based services.")
+    showToast("critical error", "Chrome with Web Bluetooth API Enabled is REQUIRED to use Bluetooth-based services.")
     console.log("BT Unsupported.")
     return;
   }
@@ -1131,6 +1198,7 @@ Object.assign(window.firebaseModules, {
   selectPatient,
   saveDataCommand,
   showToast,
+  navigateToScreen,
 });
 
 // Initialize when DOM is loaded
