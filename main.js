@@ -37,6 +37,7 @@ const AppState = {
   user: null,
   selectedPatientId: null,
   debugMode: false,
+  patientData: null,
   scores: {
     practice: 0,
     game1: 0,
@@ -105,6 +106,8 @@ window.firebaseModules = {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  onValue,
+  db,
   uploadFile,
   retrieveFile,
   writeToDB,
@@ -794,11 +797,9 @@ function initApp() {
 
   onAuthStateChanged(window.firebaseAuth, async (user) => {
     if (user) {
-      // First, set the user object. We don't have the designation yet.
       AppState.isAuthenticated = true;
-      AppState.user = { uid: user.uid, email: user.email }; // Basic user info
+      AppState.user = { uid: user.uid, email: user.email };
 
-      // Now, get the designation from the database
       let userRef;
       let snapshot;
       let userData;
@@ -808,9 +809,10 @@ function initApp() {
       snapshot = await get(userRef);
       if (snapshot.exists()) {
         userData = snapshot.val();
-        // Update AppState.user with the full data
         AppState.user = { ...AppState.user, ...userData };
         if (AppState.user.designation === 'patient') {
+          fetchPatientData(); // Correct placement and no UID argument
+          displayPatientData();
           navigateToScreen('patient-dashboard-screen');
           return;
         }
@@ -822,17 +824,20 @@ function initApp() {
         snapshot = await get(userRef);
         if (snapshot.exists()) {
           userData = snapshot.val();
-          // Update AppState.user with the full data
           AppState.user = { ...AppState.user, ...userData };
           if (AppState.user.designation === 'doctor') {
             navigateToScreen('mode-selection-screen');
-            fetchAndPopulatePatients()
+            fetchAndPopulatePatients();
+            return;
+          } else if (AppState.user.designation === 'patient') {
+            fetchPatientData(); // Correct placement and no UID argument
+            displayPatientData();
+            navigateToScreen('patient-dashboard-screen');
             return;
           }
         }
       }
 
-      // If user data is still not found, handle as a generic user
       if (!userData) {
         navigateToScreen('no-user-found-screen');
       }
@@ -1042,6 +1047,55 @@ async function saveDataCommand(score, extraInfo = "") {
   }
 }
 
+// --------------------------
+// Patient Dashboard System
+// --------------------------
+
+function fetchPatientData() {
+  const userId = AppState.user.uid;
+  if (!userId) {
+    console.error("User ID is not available.");
+    showToast("critical error", "Please log in to view data.");
+    return;
+  }
+
+  // CORRECTED LINE: Use the ref() function with the firebaseDB instance
+  const dbRef = ref(window.firebaseDB, 'users/patients/' + userId + '/data');
+
+  onValue(dbRef, (snapshot) => {
+    const data = snapshot.val();
+    AppState.patientData = data;
+    displayPatientData();
+  }, (error) => {
+    console.error("Error fetching patient data:", error);
+    showToast("critical error", "Failed to load patient data.");
+  });
+}
+
+
+function displayPatientData() {
+  const sessionList = document.getElementById('session-list');
+  
+  // Clear any existing content
+  sessionList.innerHTML = '';
+  
+  // Check if patientData exists and is not empty
+  if (AppState.patientData) {
+    // Convert the data object to a formatted JSON string
+    const dataString = JSON.stringify(AppState.patientData, null, 2);
+    
+    // Create a <pre> tag to preserve formatting and display the raw JSON
+    const preElement = document.createElement('pre');
+    preElement.textContent = dataString;
+    
+    // Append the element to the session list container
+    sessionList.appendChild(preElement);
+    
+  } else {
+    // Display a message if no data is found
+    sessionList.innerHTML = '<li>No data to display.</li>';
+  }
+}
 // --------------------------
 // Other Low-Level Functions
 // --------------------------
