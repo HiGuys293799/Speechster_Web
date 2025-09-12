@@ -787,6 +787,8 @@ function initApp() {
     navigateToScreen(initialHash);
   }
 
+  navigateToScreen(AppState.currentScreen);
+
   // Monitor auth state
   const { onAuthStateChanged, ref, get } = window.firebaseModules;
 
@@ -832,7 +834,7 @@ function initApp() {
 
       // If user data is still not found, handle as a generic user
       if (!userData) {
-        navigateToScreen('mode-selection-screen');
+        navigateToScreen('no-user-found-screen');
       }
 
     } else {
