@@ -65,7 +65,7 @@ body {
   position: relative;
   z-index: 1;
   max-height: 100vh;   /* prevents it from overflowing the screen */
-  overflow-y: auto;/* adds vertical scrollbar if content is too tall */
+  overflow: auto;
   width: 360px;
   padding: 20px;
   border-radius: 16px;

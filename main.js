@@ -10,12 +10,12 @@ const TOAST_SOUND_LEADINS = {
 
 // Toast sound sources (host locally in /sounds/toasts/)
 const TOAST_SOUNDS = {
-  success:              "/sounds/toasts/success.mp3",
-  "critical error":     "/sounds/toasts/error.mp3",
-  warning:              "/sounds/toasts/warning.mp3",
-  info:                 "/sounds/toasts/info.mp3",
-  "excellent!":         "/sounds/toasts/success.mp3",
-  "you can do better!": "/sounds/toasts/warning.mp3",
+  success:              "sounds/toasts/success.mp3",
+  "critical error":     "sounds/toasts/error.mp3",
+  warning:              "sounds/toasts/warning.mp3",
+  info:                 "sounds/toasts/info.mp3",
+  "excellent!":         "sounds/toasts/success.mp3",
+  "you can do better!": "sounds/toasts/warning.mp3",
 };
 
 function initAudioContext() {
